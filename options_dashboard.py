@@ -1601,7 +1601,7 @@ def genera_pdf_scenari(strategia, params):
             ["Take Profit 50%",   f"Chiudi spread a {tp_credito:.2f} costo", f"+{tp_val:.0f} \u20ac incassati"],
             ["Stop Loss 2x",      f"Chiudi se spread vale {sl_credito:.2f}", f"-{sl_val:.0f} \u20ac perdita"],
             ["Chiudi a 21 DTE",   f"Entro il {data_21dte}",                  "Evita rischio Gamma elevato"],
-            ["Credito minimo",    "\u226533% della larghezza",               "Regola 1/3 Tastytrade"],
+            ["Margine bloccato",  f"{params.get('bps_margine_tot', 0):.0f} \u20ac",  f"{params.get('n_contratti',n)} contratti \u00d7 {params.get('bps_margine_c', 0):.0f} \u20ac"],
             ["IV Rank minimo",    "> 30\u201340 / 100",                      "Premi strutturalmente elevati"],
             ["Apertura ideale",   "30\u201345 DTE",                          "Theta decay ottimale"],
         ]
@@ -2045,6 +2045,8 @@ if genera_pdf_btn:
         "bps_K_venduta": bps_K_venduta, "bps_K_comprata": bps_K_comprata,
         "bps_credito": bps_credito,
         "bps_be": bps_be,
+        "bps_margine_tot": bps_margine_tot,
+        "bps_margine_c": bps_margine_c,
         "prezzo_put_venduta": prezzo_put_venduta if STRATEGIA == "bull_put_spread" else None,
         "prezzo_put_comprata": prezzo_put_comprata if STRATEGIA == "bull_put_spread" else None,
     }
