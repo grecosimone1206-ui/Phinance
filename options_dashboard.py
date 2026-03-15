@@ -2777,8 +2777,8 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
                 <span class="tip-icon">?</span>
                 <div class="tip-box">Il margine del bull put spread &egrave; fisso e predefinito: (larghezza &mdash; credito) &times; 100. Non varia con il prezzo del sottostante. &Egrave; anche la perdita massima teorica assoluta della posizione.</div>
             </div>
-            <div class="kpi-value gold">{fmt(bps_margine_tot,0)} &euro;</div>
-            <div class="kpi-sub">{fmt(bps_margine_c,0)} &euro; &times; {n_contratti} contratti</div>
+            <div class="kpi-value gold">{fmt(bps_margine_tot,2)} &euro;</div>
+            <div class="kpi-sub">{fmt(bps_margine_c,2)} &euro; &times; {n_contratti} contratti</div>
             <div><span class="kpi-badge gold" style="white-space:nowrap">FISSO &mdash; RISCHIO DEFINITO</span></div>
         </div>
         """, unsafe_allow_html=True)
