@@ -457,8 +457,9 @@ html, body,
     border: 1px solid var(--border-subtle) !important;
     border-radius: var(--radius-sm) !important;
     color: var(--text-primary) !important;
-    font-family: var(--font-mono) !important;
+    font-family: var(--font-body) !important;
     font-size: 0.85rem !important;
+    font-feature-settings: "zero" 0 !important;
     transition: border-color 0.2s ease !important;
 }
 [data-testid="stSidebar"] input:focus {
@@ -1219,6 +1220,35 @@ hr { border-color: var(--border-subtle) !important; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
 </style>
+<script>
+// Forza il punto come separatore decimale in tutti gli input numerici della sidebar
+(function() {
+    function fixDecimalSeparator() {
+        const sidebar = document.querySelector('[data-testid="stSidebar"]');
+        if (!sidebar) return;
+        const inputs = sidebar.querySelectorAll('input[type="number"], input[aria-label]');
+        inputs.forEach(function(inp) {
+            if (!inp._decimalFixed) {
+                inp._decimalFixed = true;
+                inp.addEventListener('blur', function() {
+                    this.value = this.value.replace(/,/g, '.');
+                });
+                inp.addEventListener('input', function() {
+                    const pos = this.selectionStart;
+                    if (this.value.includes(',')) {
+                        this.value = this.value.replace(/,/g, '.');
+                        try { this.setSelectionRange(pos, pos); } catch(e) {}
+                    }
+                });
+            }
+        });
+    }
+    // Esegui al caricamento e ogni volta che il DOM cambia
+    const observer = new MutationObserver(fixDecimalSeparator);
+    observer.observe(document.body, { childList: true, subtree: true });
+    fixDecimalSeparator();
+})();
+</script>
 """, unsafe_allow_html=True)
 
 
@@ -2119,7 +2149,7 @@ with st.sidebar:
             on_change=lambda: st.session_state.update({"input_dte": st.session_state["slider_dte"]}),
             help="Giorni calendariali alla scadenza. Ottimale: 35-49 giorni.")
     with col_n:
-        st.number_input("dte_n", 1, 365, key="input_dte", format="%d",
+        st.number_input("dte_n", 1, 365, key="input_dte", format="%.0f",
             label_visibility="collapsed",
             on_change=lambda: st.session_state.update({"slider_dte": int(st.session_state["input_dte"])}))
     dte = int(st.session_state["slider_dte"])
@@ -2135,7 +2165,7 @@ with st.sidebar:
             on_change=lambda: st.session_state.update({"input_iv": st.session_state["slider_iv"]}),
             help="Volatilità implicita del sottostante — 'IV IND' sul tuo broker. Usato da Black-Scholes per tutti i calcoli.")
     with col_n:
-        st.number_input("iv_n", 1.0, 150.0, step=0.5, format="%.1f", key="input_iv",
+        st.number_input("iv_n", 1.0, 150.0, step=0.5, format="%.2f", key="input_iv",
             label_visibility="collapsed",
             on_change=lambda: st.session_state.update({"slider_iv": float(st.session_state["input_iv"])}))
     if "input_iv" not in st.session_state: st.session_state["input_iv"] = st.session_state["slider_iv"]
@@ -2154,7 +2184,7 @@ with st.sidebar:
             on_change=lambda: st.session_state.update({"input_ivr": st.session_state["slider_ivr"]}),
             help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere.")
     with col_n:
-        st.number_input("ivr_n", 0.0, 100.0, step=0.5, format="%.1f", key="input_ivr",
+        st.number_input("ivr_n", 0.0, 100.0, step=0.5, format="%.2f", key="input_ivr",
             label_visibility="collapsed",
             on_change=lambda: st.session_state.update({"slider_ivr": float(st.session_state["input_ivr"])}))
     iv_rank_reale = float(st.session_state["slider_ivr"])
@@ -2174,7 +2204,7 @@ with st.sidebar:
             on_change=lambda: st.session_state.update({"input_nc": st.session_state["slider_nc"]}),
             help="Quanti contratti vuoi vendere. Ogni contratto copre 100 azioni.")
     with col_n:
-        st.number_input("nc_n", 1, 50, key="input_nc", format="%d",
+        st.number_input("nc_n", 1, 50, key="input_nc", format="%.0f",
             label_visibility="collapsed",
             on_change=lambda: st.session_state.update({"slider_nc": int(st.session_state["input_nc"])}))
     n_contratti = int(st.session_state["slider_nc"])
@@ -2191,7 +2221,7 @@ with st.sidebar:
                 on_change=lambda: st.session_state.update({"input_mp": st.session_state["slider_mp"]}),
                 help="% del valore dello strike bloccata come garanzia dal broker. Tipicamente 15-20% per ETF OTM.")
         with col_n:
-            st.number_input("mp_n", 5.0, 50.0, step=1.0, format="%.1f", key="input_mp",
+            st.number_input("mp_n", 5.0, 50.0, step=1.0, format="%.2f", key="input_mp",
                 label_visibility="collapsed",
                 on_change=lambda: st.session_state.update({"slider_mp": float(st.session_state["input_mp"])}))
         marg_pct = float(st.session_state["slider_mp"])
@@ -2212,7 +2242,7 @@ with st.sidebar:
             on_change=lambda: st.session_state.update({"input_pt": st.session_state["slider_pt"]}),
             help="84% = Delta 0.16 — ottimale.\n90% = Delta 0.10 — conservativo.\n80% = Delta 0.20 — aggressivo.")
     with col_n:
-        st.number_input("pt_n", 70.0, 99.0, step=1.0, format="%.1f", key="input_pt",
+        st.number_input("pt_n", 70.0, 99.0, step=1.0, format="%.2f", key="input_pt",
             label_visibility="collapsed",
             on_change=lambda: st.session_state.update({"slider_pt": float(st.session_state["input_pt"])}))
     prob_t = float(st.session_state["slider_pt"])
@@ -2262,7 +2292,7 @@ with st.sidebar:
                 on_change=lambda: st.session_state.update({"input_ls": st.session_state["slider_ls"]}),
                 help="Differenza in dollari tra lo strike venduto e quello comprato.")
         with col_ls_n:
-            st.number_input("ls_n", 1, 100, key="input_ls", format="%d",
+            st.number_input("ls_n", 1, 100, key="input_ls", format="%.0f",
                 label_visibility="collapsed",
                 on_change=lambda: st.session_state.update({"slider_ls": int(st.session_state["input_ls"])}))
         larghezza_spread = int(st.session_state["slider_ls"])
