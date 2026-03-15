@@ -2088,27 +2088,97 @@ with st.sidebar:
 
     st.markdown("<div class='sb-section'>Parametri Opzione</div>", unsafe_allow_html=True)
 
-    dte    = st.slider("Giorni alla Scadenza (DTE)", 1, 365, 45,
-        help=f"Giorni calendariali alla scadenza.\nOttimale: 35-49 giorni.\nUltimo aggiornamento: impostato da te manualmente.")
-    iv_pct = st.slider("IV IND (%)", 1.0, 150.0,
-        float(st.session_state.get("_iv_pct_init", 20.0)), 0.5,
-        key="iv_pct_slider",
-        help="Volatilità implicita del sottostante — il valore 'IV IND' visibile nella scheda del titolo sul tuo broker.\nUsato da Black-Scholes per tutti i calcoli. Se hai attivato 'Usa IV IND reale' nella sezione Dati Reali, quel valore sovrascrive questo solo nel riquadro informativo — qui imposta comunque il parametro per i calcoli.")
+    # ── DTE ──
+    def _sync_dte_s(): st.session_state["_dte_val"] = int(st.session_state["slider_dte"])
+    def _sync_dte_n(): st.session_state["_dte_val"] = int(st.session_state["input_dte"])
+    if "_dte_val" not in st.session_state: st.session_state["_dte_val"] = 45
+    cur_dte = int(st.session_state["_dte_val"])
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>GIORNI ALLA SCADENZA (DTE)</span>", unsafe_allow_html=True)
+    col_s, col_n = st.columns([2,1])
+    with col_s:
+        st.slider("dte_s", 1, 365, cur_dte, 1, label_visibility="collapsed", key="slider_dte", on_change=_sync_dte_s,
+            help="Giorni calendariali alla scadenza. Ottimale: 35-49 giorni.")
+    with col_n:
+        st.number_input("dte_n", 1, 365, cur_dte, 1, label_visibility="collapsed", key="input_dte", on_change=_sync_dte_n)
+    dte = int(st.session_state["_dte_val"])
+
+    # ── IV IND ──
+    def _sync_iv_s(): st.session_state["_iv_pct_init"] = float(st.session_state["slider_iv"])
+    def _sync_iv_n(): st.session_state["_iv_pct_init"] = float(st.session_state["input_iv"])
+    cur_iv = float(st.session_state.get("_iv_pct_init", 20.0))
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV IND (%)</span>", unsafe_allow_html=True)
+    col_s, col_n = st.columns([2,1])
+    with col_s:
+        st.slider("iv_s", 1.0, 150.0, cur_iv, 0.5, label_visibility="collapsed", key="slider_iv", on_change=_sync_iv_s,
+            help="Volatilità implicita del sottostante — 'IV IND' sul tuo broker. Usato da Black-Scholes per tutti i calcoli.")
+    with col_n:
+        st.number_input("iv_n", 1.0, 150.0, cur_iv, 0.5, label_visibility="collapsed", key="input_iv", format="%.1f", on_change=_sync_iv_n)
+    iv_pct = float(st.session_state.get("_iv_pct_init", 20.0))
+
+    # ── IV RANK ──
+    def _sync_ivr_s(): st.session_state["_ivr_val"] = float(st.session_state["slider_ivr"])
+    def _sync_ivr_n(): st.session_state["_ivr_val"] = float(st.session_state["input_ivr"])
+    cur_ivr = float(st.session_state.get("_ivr_val", 50.0))
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK (0–100)</span>", unsafe_allow_html=True)
+    col_s, col_n = st.columns([2,1])
+    with col_s:
+        st.slider("ivr_s", 0.0, 100.0, cur_ivr, 0.5, label_visibility="collapsed", key="slider_ivr", on_change=_sync_ivr_s,
+            help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere.")
+    with col_n:
+        st.number_input("ivr_n", 0.0, 100.0, cur_ivr, 0.5, label_visibility="collapsed", key="input_ivr", format="%.1f", on_change=_sync_ivr_n)
+    iv_rank_reale = float(st.session_state.get("_ivr_val", 50.0))
+
     r_pct = 4.5  # tasso risk-free fisso
 
     st.markdown("<div class='sb-section'>Posizione & Rischio</div>", unsafe_allow_html=True)
-    n_contratti = st.slider("Numero di Contratti", 1, 50, 3,
-        help="Quanti contratti vuoi vendere.\nOgni contratto copre 100 azioni del sottostante.")
+
+    # ── NUMERO CONTRATTI ──
+    def _sync_nc_s(): st.session_state["_nc_val"] = int(st.session_state["slider_nc"])
+    def _sync_nc_n(): st.session_state["_nc_val"] = int(st.session_state["input_nc"])
+    if "_nc_val" not in st.session_state: st.session_state["_nc_val"] = 3
+    cur_nc = int(st.session_state["_nc_val"])
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>NUMERO DI CONTRATTI</span>", unsafe_allow_html=True)
+    col_s, col_n = st.columns([2,1])
+    with col_s:
+        st.slider("nc_s", 1, 50, cur_nc, 1, label_visibility="collapsed", key="slider_nc", on_change=_sync_nc_s,
+            help="Quanti contratti vuoi vendere. Ogni contratto copre 100 azioni.")
+    with col_n:
+        st.number_input("nc_n", 1, 50, cur_nc, 1, label_visibility="collapsed", key="input_nc", on_change=_sync_nc_n)
+    n_contratti = int(st.session_state["_nc_val"])
+
+    # ── MARGINE BROKER (solo PS) ──
     if STRATEGIA == "put_scoperta":
-        marg_pct = st.slider("Margine Broker (%)", 5.0, 50.0, 15.0, 1.0,
-            help="% del valore dello strike bloccata come garanzia dal broker.\nTipicamente richiesto il 15-20% per le put OTM su ETF.\nVerifica sul tuo broker.")
+        def _sync_mp_s(): st.session_state["_mp_val"] = float(st.session_state["slider_mp"])
+        def _sync_mp_n(): st.session_state["_mp_val"] = float(st.session_state["input_mp"])
+        if "_mp_val" not in st.session_state: st.session_state["_mp_val"] = 15.0
+        cur_mp = float(st.session_state["_mp_val"])
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>MARGINE BROKER (%)</span>", unsafe_allow_html=True)
+        col_s, col_n = st.columns([2,1])
+        with col_s:
+            st.slider("mp_s", 5.0, 50.0, cur_mp, 1.0, label_visibility="collapsed", key="slider_mp", on_change=_sync_mp_s,
+                help="% del valore dello strike bloccata come garanzia dal broker. Tipicamente 15-20% per ETF OTM.")
+        with col_n:
+            st.number_input("mp_n", 5.0, 50.0, cur_mp, 1.0, label_visibility="collapsed", key="input_mp", format="%.1f", on_change=_sync_mp_n)
+        marg_pct = float(st.session_state["_mp_val"])
     else:
-        marg_pct = 15.0  # non usato nel BPS, margine calcolato automaticamente
-    crash = 20.0  # scenario crisi fisso (usato internamente per calc_wcs)
+        marg_pct = 15.0
+    crash = 20.0
 
     st.markdown("<div class='sb-section'>Obiettivo Strategia</div>", unsafe_allow_html=True)
-    prob_t = st.slider("Probabilità di Successo (%)", 70.0, 99.0, 84.0, 1.0,
-        help="84% = Delta 0.16 — punto ottimale per la strategia.\n90% = Delta 0.10 — più conservativo.\n80% = Delta 0.20 — più aggressivo.")
+
+    # ── PROBABILITÀ DI SUCCESSO ──
+    def _sync_pt_s(): st.session_state["_pt_val"] = float(st.session_state["slider_pt"])
+    def _sync_pt_n(): st.session_state["_pt_val"] = float(st.session_state["input_pt"])
+    if "_pt_val" not in st.session_state: st.session_state["_pt_val"] = 84.0
+    cur_pt = float(st.session_state["_pt_val"])
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PROBABILITÀ DI SUCCESSO (%)</span>", unsafe_allow_html=True)
+    col_s, col_n = st.columns([2,1])
+    with col_s:
+        st.slider("pt_s", 70.0, 99.0, cur_pt, 1.0, label_visibility="collapsed", key="slider_pt", on_change=_sync_pt_s,
+            help="84% = Delta 0.16 — ottimale.\n90% = Delta 0.10 — conservativo.\n80% = Delta 0.20 — aggressivo.")
+    with col_n:
+        st.number_input("pt_n", 70.0, 99.0, cur_pt, 1.0, label_visibility="collapsed", key="input_pt", format="%.1f", on_change=_sync_pt_n)
+    prob_t = float(st.session_state["_pt_val"])
 
     # Parametri specifici Bull Put Spread
     if STRATEGIA == "bull_put_spread":
@@ -2149,7 +2219,6 @@ with st.sidebar:
             options=[5, 10, 15, 20, 25, 30, 50], value=10,
             help="Differenza in dollari tra lo strike venduto e quello comprato.")
 
-        # Credito netto calcolato automaticamente — nessun display aggiuntivo
         credito_reale_bps = max(0.01, round(prezzo_put_venduta - prezzo_put_comprata, 2))
         st.session_state["_credito_bps"] = credito_reale_bps
     else:
@@ -2160,19 +2229,7 @@ with st.sidebar:
 
     st.markdown("<div class='sb-section'>Dati Reali dal Broker</div>", unsafe_allow_html=True)
 
-    # ── IV Rank manuale ──
-    usa_ivrank_reale = st.toggle("Usa IV Rank reale",
-        help="Attiva per inserire l'IV Rank reale che vedi sul tuo broker.")
-    if usa_ivrank_reale:
-        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK REALE (0&ndash;100)</span>", unsafe_allow_html=True)
-        iv_rank_reale = st.number_input("IV Rank reale", 0.0, 100.0,
-            float(st.session_state.get("_ivr_val", 50.0)), 0.1,
-            label_visibility="collapsed", key="input_ivr", format="%.1f")
-        st.session_state["_ivr_val"] = iv_rank_reale
-    else:
-        iv_rank_reale = None
-
-    iv_ind_reale = None  # lo slider IV IND (%) è il valore diretto, nessun toggle separato
+    iv_ind_reale = None  # IV IND gestita direttamente dallo slider sopra
 
     # ── Greche reali — solo put scoperta ──
     if STRATEGIA == "put_scoperta":
@@ -2267,7 +2324,7 @@ if dati.get("errore"):
 
 spot    = dati["prezzo_spot"]
 vol_st  = dati["vol_storica"]
-iv_rank = iv_rank_reale if iv_rank_reale is not None else dati["iv_rank"]
+iv_rank = iv_rank_reale  # sempre valorizzato dallo slider IV Rank
 iv_ind  = iv_pct  # IV IND: direttamente dallo slider omonimo
 vix_val = dati["vix"]
 var     = dati["variazione_gg"]
