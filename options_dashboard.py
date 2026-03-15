@@ -493,6 +493,26 @@ html, body,
     box-shadow: 0 0 16px rgba(0,194,255,0.2) !important;
     transform: translateY(-1px) !important;
 }
+[data-testid="stSidebar"] .stDownloadButton button {
+    background: linear-gradient(135deg, rgba(0,229,160,0.12), rgba(0,229,160,0.06)) !important;
+    border: 1.5px solid rgba(0,229,160,0.6) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--accent-green) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    padding: 12px 16px !important;
+    width: 100% !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 0 12px rgba(0,229,160,0.15) !important;
+}
+[data-testid="stSidebar"] .stDownloadButton button:hover {
+    background: linear-gradient(135deg, rgba(0,229,160,0.22), rgba(0,229,160,0.12)) !important;
+    border-color: rgba(0,229,160,0.9) !important;
+    box-shadow: 0 0 22px rgba(0,229,160,0.35) !important;
+    transform: translateY(-1px) !important;
+}
 [data-testid="stSidebar"] hr {
     border-color: var(--border-subtle) !important;
     margin: 1.5rem 0 !important;
