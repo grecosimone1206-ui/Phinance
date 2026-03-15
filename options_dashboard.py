@@ -2089,76 +2089,83 @@ with st.sidebar:
     st.markdown("<div class='sb-section'>Parametri Opzione</div>", unsafe_allow_html=True)
 
     # ── DTE ──
-    def _sync_dte_s(): st.session_state["_dte_val"] = int(st.session_state["slider_dte"])
-    def _sync_dte_n(): st.session_state["_dte_val"] = int(st.session_state["input_dte"])
     if "_dte_val" not in st.session_state: st.session_state["_dte_val"] = 45
-    cur_dte = int(st.session_state["_dte_val"])
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>GIORNI ALLA SCADENZA (DTE)</span>", unsafe_allow_html=True)
     col_s, col_n = st.columns([2,1])
     with col_s:
-        st.slider("dte_s", 1, 365, cur_dte, 1, label_visibility="collapsed", key="slider_dte", on_change=_sync_dte_s,
+        st.slider("dte_s", 1, 365, int(st.session_state["_dte_val"]), 1,
+            label_visibility="collapsed", key="slider_dte",
+            on_change=lambda: st.session_state.update({"_dte_val": int(st.session_state["slider_dte"])}),
             help="Giorni calendariali alla scadenza. Ottimale: 35-49 giorni.")
     with col_n:
-        st.number_input("dte_n", 1, 365, cur_dte, 1, label_visibility="collapsed", key="input_dte", on_change=_sync_dte_n)
+        st.number_input("dte_n", 1, 365, int(st.session_state["_dte_val"]), 1,
+            label_visibility="collapsed", key="input_dte", format="%d",
+            on_change=lambda: st.session_state.update({"_dte_val": int(st.session_state["input_dte"])}))
     dte = int(st.session_state["_dte_val"])
 
     # ── IV IND ──
-    def _sync_iv_s(): st.session_state["_iv_pct_init"] = float(st.session_state["slider_iv"])
-    def _sync_iv_n(): st.session_state["_iv_pct_init"] = float(st.session_state["input_iv"])
-    cur_iv = float(st.session_state.get("_iv_pct_init", 20.0))
+    if "_iv_pct_init" not in st.session_state: st.session_state["_iv_pct_init"] = 20.0
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV IND (%)</span>", unsafe_allow_html=True)
     col_s, col_n = st.columns([2,1])
     with col_s:
-        st.slider("iv_s", 1.0, 150.0, cur_iv, 0.5, label_visibility="collapsed", key="slider_iv", on_change=_sync_iv_s,
+        st.slider("iv_s", 1.0, 150.0, float(st.session_state["_iv_pct_init"]), 0.5,
+            label_visibility="collapsed", key="slider_iv",
+            on_change=lambda: st.session_state.update({"_iv_pct_init": float(st.session_state["slider_iv"])}),
             help="Volatilità implicita del sottostante — 'IV IND' sul tuo broker. Usato da Black-Scholes per tutti i calcoli.")
     with col_n:
-        st.number_input("iv_n", 1.0, 150.0, cur_iv, 0.5, label_visibility="collapsed", key="input_iv", format="%.1f", on_change=_sync_iv_n)
-    iv_pct = float(st.session_state.get("_iv_pct_init", 20.0))
+        st.number_input("iv_n", 1.0, 150.0, float(st.session_state["_iv_pct_init"]), 0.5,
+            label_visibility="collapsed", key="input_iv", format="%.1f",
+            on_change=lambda: st.session_state.update({"_iv_pct_init": float(st.session_state["input_iv"])}))
+    iv_pct = float(st.session_state["_iv_pct_init"])
 
     # ── IV RANK ──
-    def _sync_ivr_s(): st.session_state["_ivr_val"] = float(st.session_state["slider_ivr"])
-    def _sync_ivr_n(): st.session_state["_ivr_val"] = float(st.session_state["input_ivr"])
-    cur_ivr = float(st.session_state.get("_ivr_val", 50.0))
+    if "_ivr_val" not in st.session_state: st.session_state["_ivr_val"] = 50.0
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK (0–100)</span>", unsafe_allow_html=True)
     col_s, col_n = st.columns([2,1])
     with col_s:
-        st.slider("ivr_s", 0.0, 100.0, cur_ivr, 0.5, label_visibility="collapsed", key="slider_ivr", on_change=_sync_ivr_s,
+        st.slider("ivr_s", 0.0, 100.0, float(st.session_state["_ivr_val"]), 0.5,
+            label_visibility="collapsed", key="slider_ivr",
+            on_change=lambda: st.session_state.update({"_ivr_val": float(st.session_state["slider_ivr"])}),
             help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere.")
     with col_n:
-        st.number_input("ivr_n", 0.0, 100.0, cur_ivr, 0.5, label_visibility="collapsed", key="input_ivr", format="%.1f", on_change=_sync_ivr_n)
-    iv_rank_reale = float(st.session_state.get("_ivr_val", 50.0))
+        st.number_input("ivr_n", 0.0, 100.0, float(st.session_state["_ivr_val"]), 0.5,
+            label_visibility="collapsed", key="input_ivr", format="%.1f",
+            on_change=lambda: st.session_state.update({"_ivr_val": float(st.session_state["input_ivr"])}))
+    iv_rank_reale = float(st.session_state["_ivr_val"])
 
-    r_pct = 4.5  # tasso risk-free fisso
+    r_pct = 4.5
 
     st.markdown("<div class='sb-section'>Posizione & Rischio</div>", unsafe_allow_html=True)
 
     # ── NUMERO CONTRATTI ──
-    def _sync_nc_s(): st.session_state["_nc_val"] = int(st.session_state["slider_nc"])
-    def _sync_nc_n(): st.session_state["_nc_val"] = int(st.session_state["input_nc"])
     if "_nc_val" not in st.session_state: st.session_state["_nc_val"] = 3
-    cur_nc = int(st.session_state["_nc_val"])
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>NUMERO DI CONTRATTI</span>", unsafe_allow_html=True)
     col_s, col_n = st.columns([2,1])
     with col_s:
-        st.slider("nc_s", 1, 50, cur_nc, 1, label_visibility="collapsed", key="slider_nc", on_change=_sync_nc_s,
+        st.slider("nc_s", 1, 50, int(st.session_state["_nc_val"]), 1,
+            label_visibility="collapsed", key="slider_nc",
+            on_change=lambda: st.session_state.update({"_nc_val": int(st.session_state["slider_nc"])}),
             help="Quanti contratti vuoi vendere. Ogni contratto copre 100 azioni.")
     with col_n:
-        st.number_input("nc_n", 1, 50, cur_nc, 1, label_visibility="collapsed", key="input_nc", on_change=_sync_nc_n)
+        st.number_input("nc_n", 1, 50, int(st.session_state["_nc_val"]), 1,
+            label_visibility="collapsed", key="input_nc", format="%d",
+            on_change=lambda: st.session_state.update({"_nc_val": int(st.session_state["input_nc"])}))
     n_contratti = int(st.session_state["_nc_val"])
 
     # ── MARGINE BROKER (solo PS) ──
     if STRATEGIA == "put_scoperta":
-        def _sync_mp_s(): st.session_state["_mp_val"] = float(st.session_state["slider_mp"])
-        def _sync_mp_n(): st.session_state["_mp_val"] = float(st.session_state["input_mp"])
         if "_mp_val" not in st.session_state: st.session_state["_mp_val"] = 15.0
-        cur_mp = float(st.session_state["_mp_val"])
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>MARGINE BROKER (%)</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
         with col_s:
-            st.slider("mp_s", 5.0, 50.0, cur_mp, 1.0, label_visibility="collapsed", key="slider_mp", on_change=_sync_mp_s,
+            st.slider("mp_s", 5.0, 50.0, float(st.session_state["_mp_val"]), 1.0,
+                label_visibility="collapsed", key="slider_mp",
+                on_change=lambda: st.session_state.update({"_mp_val": float(st.session_state["slider_mp"])}),
                 help="% del valore dello strike bloccata come garanzia dal broker. Tipicamente 15-20% per ETF OTM.")
         with col_n:
-            st.number_input("mp_n", 5.0, 50.0, cur_mp, 1.0, label_visibility="collapsed", key="input_mp", format="%.1f", on_change=_sync_mp_n)
+            st.number_input("mp_n", 5.0, 50.0, float(st.session_state["_mp_val"]), 1.0,
+                label_visibility="collapsed", key="input_mp", format="%.1f",
+                on_change=lambda: st.session_state.update({"_mp_val": float(st.session_state["input_mp"])}))
         marg_pct = float(st.session_state["_mp_val"])
     else:
         marg_pct = 15.0
@@ -2167,17 +2174,18 @@ with st.sidebar:
     st.markdown("<div class='sb-section'>Obiettivo Strategia</div>", unsafe_allow_html=True)
 
     # ── PROBABILITÀ DI SUCCESSO ──
-    def _sync_pt_s(): st.session_state["_pt_val"] = float(st.session_state["slider_pt"])
-    def _sync_pt_n(): st.session_state["_pt_val"] = float(st.session_state["input_pt"])
     if "_pt_val" not in st.session_state: st.session_state["_pt_val"] = 84.0
-    cur_pt = float(st.session_state["_pt_val"])
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PROBABILITÀ DI SUCCESSO (%)</span>", unsafe_allow_html=True)
     col_s, col_n = st.columns([2,1])
     with col_s:
-        st.slider("pt_s", 70.0, 99.0, cur_pt, 1.0, label_visibility="collapsed", key="slider_pt", on_change=_sync_pt_s,
+        st.slider("pt_s", 70.0, 99.0, float(st.session_state["_pt_val"]), 1.0,
+            label_visibility="collapsed", key="slider_pt",
+            on_change=lambda: st.session_state.update({"_pt_val": float(st.session_state["slider_pt"])}),
             help="84% = Delta 0.16 — ottimale.\n90% = Delta 0.10 — conservativo.\n80% = Delta 0.20 — aggressivo.")
     with col_n:
-        st.number_input("pt_n", 70.0, 99.0, cur_pt, 1.0, label_visibility="collapsed", key="input_pt", format="%.1f", on_change=_sync_pt_n)
+        st.number_input("pt_n", 70.0, 99.0, float(st.session_state["_pt_val"]), 1.0,
+            label_visibility="collapsed", key="input_pt", format="%.1f",
+            on_change=lambda: st.session_state.update({"_pt_val": float(st.session_state["input_pt"])}))
     prob_t = float(st.session_state["_pt_val"])
 
     # Parametri specifici Bull Put Spread
