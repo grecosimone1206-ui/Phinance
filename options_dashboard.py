@@ -2349,7 +2349,7 @@ with st.sidebar:
              "25 prezzi ciascuno con valore delle opzioni e P&L a scadenza.")
     if "pdf_scenari_bytes" in st.session_state and st.session_state["pdf_scenari_bytes"]:
         st.download_button(
-            label="⬇️ Scarica Report Scenari",
+            label="Scarica Report Scenari",
             data=st.session_state["pdf_scenari_bytes"],
             file_name=st.session_state.get("pdf_scenari_fname", "report.pdf"),
             mime="application/pdf",
@@ -2363,7 +2363,7 @@ with st.sidebar:
              "della volatilità e della solidità del trade.")
     if "pdf_ai_bytes" in st.session_state and st.session_state["pdf_ai_bytes"]:
         st.download_button(
-            label="⬇️ Scarica Report AI",
+            label="Scarica Report AI",
             data=st.session_state["pdf_ai_bytes"],
             file_name=st.session_state.get("pdf_ai_fname", "report_ai.pdf"),
             mime="application/pdf",
