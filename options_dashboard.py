@@ -2162,17 +2162,18 @@ with st.sidebar:
     # ── MARGINE BROKER (solo PS) ──
     if STRATEGIA == "put_scoperta":
         if "slider_mp" not in st.session_state: st.session_state["slider_mp"] = 15.0
+        if "input_mp" not in st.session_state: st.session_state["input_mp"] = st.session_state["slider_mp"]
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>MARGINE BROKER (%)</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
         with col_s:
             st.slider("mp_s", 5.0, 50.0, step=1.0, key="slider_mp",
                 label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"input_mp": st.session_state["slider_mp"]}),
                 help="% del valore dello strike bloccata come garanzia dal broker. Tipicamente 15-20% per ETF OTM.")
         with col_n:
             st.number_input("mp_n", 5.0, 50.0, step=1.0, format="%.1f", key="input_mp",
                 label_visibility="collapsed",
                 on_change=lambda: st.session_state.update({"slider_mp": float(st.session_state["input_mp"])}))
-        if "input_mp" not in st.session_state: st.session_state["input_mp"] = st.session_state["slider_mp"]
         marg_pct = float(st.session_state["slider_mp"])
     else:
         marg_pct = 15.0
@@ -2231,9 +2232,20 @@ with st.sidebar:
         prezzo_put_comprata = float(st.session_state["_pc_val"])
 
         # Larghezza spread
-        larghezza_spread = st.select_slider("Larghezza Spread ($)",
-            options=[5, 10, 15, 20, 25, 30, 50], value=10,
-            help="Differenza in dollari tra lo strike venduto e quello comprato.")
+        if "slider_ls" not in st.session_state: st.session_state["slider_ls"] = 10
+        if "input_ls" not in st.session_state: st.session_state["input_ls"] = st.session_state["slider_ls"]
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>LARGHEZZA SPREAD ($)</span>", unsafe_allow_html=True)
+        col_ls_s, col_ls_n = st.columns([2,1])
+        with col_ls_s:
+            st.slider("ls_s", 1, 100, key="slider_ls",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"input_ls": st.session_state["slider_ls"]}),
+                help="Differenza in dollari tra lo strike venduto e quello comprato.")
+        with col_ls_n:
+            st.number_input("ls_n", 1, 100, key="input_ls", format="%d",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"slider_ls": int(st.session_state["input_ls"])}))
+        larghezza_spread = int(st.session_state["slider_ls"])
 
         credito_reale_bps = max(0.01, round(prezzo_put_venduta - prezzo_put_comprata, 2))
         st.session_state["_credito_bps"] = credito_reale_bps
