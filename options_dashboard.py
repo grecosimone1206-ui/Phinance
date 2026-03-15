@@ -1460,7 +1460,7 @@ def costruisci_prompt_ai(strategia, params, dati_mercato) -> str:
         mc     = params.get("mc", 0)
         marg   = params.get("marg_tot", mc * n)
         credito_tot = round(prem * n * 100, 2)
-        strat_str = f"Put Scoperta — Strike {K:.2f}, Premio {prem:.4f}/az., Credito totale +{credito_tot:.0f}€, Margine {marg:.0f}€"
+        strat_str = f"Put Scoperta — Strike {K:.2f}, Premio {prem:.4f}/az., Credito totale +{credito_tot:.2f}€, Margine {marg:.2f}€"
     else:
         K_v    = params["bps_K_venduta"]
         K_c    = params["bps_K_comprata"]
@@ -1469,7 +1469,7 @@ def costruisci_prompt_ai(strategia, params, dati_mercato) -> str:
         marg   = params.get("bps_margine_tot", 0)
         credito_tot = round(credito * n * 100, 2)
         strat_str = (f"Bull Put Spread — Strike venduto {K_v:.2f} / Strike comprato {K_c:.2f}, "
-                     f"Credito netto {credito:.2f}/az. (+{credito_tot:.0f}€ totale), Margine {marg:.0f}€")
+                     f"Credito netto {credito:.2f}/az. (+{credito_tot:.2f}€ totale), Margine {marg:.2f}€")
 
     contesto_tipo = (
         "Analizza il contesto macro USA: Fed, tassi di interesse, inflazione, stagionalità degli indici, "
@@ -1829,7 +1829,7 @@ def genera_pdf_scenari(strategia, params):
             ["Strumento",   nome,          "Strike",           f"{K:.2f}"],
             ["Prezzo Spot", f"{spot:.2f}", "Premio / az.",     f"{prem:.4f}"],
             ["DTE",         f"{dte} gg",   "Contratti",        str(n)],
-            ["IV",          f"{sigma*100:.1f}%", "Credito tot.", f"+{prem*n*mult:.0f} \u20ac"],
+            ["IV",          f"{sigma*100:.1f}%", "Credito tot.", f"+{prem*n*mult:.2f} \u20ac"],
         ]
     else:
         pv_str = f"{pv_reale:.2f}" if pv_reale else f"{credito:.4f}"
@@ -1898,8 +1898,8 @@ def genera_pdf_scenari(strategia, params):
         sl_premio   = round(prem * 2.00, 4)
         data_21dte  = (datetime.now() + __import__('datetime').timedelta(days=max(dte-21,0))).strftime("%d/%m/%Y")
         gest_rows = [
-            ["Take Profit 50%",   f"Riacquista put a {tp_premio:.2f}",   f"+{tp_val:.0f} \u20ac incassati"],
-            ["Stop Loss 2x",      f"Chiudi se put vale {sl_premio:.2f}", f"-{sl_val:.0f} \u20ac perdita"],
+            ["Take Profit 50%",   f"Riacquista put a {tp_premio:.2f}",   f"+{tp_val:.2f} \u20ac incassati"],
+            ["Stop Loss 2x",      f"Chiudi se put vale {sl_premio:.2f}", f"-{sl_val:.2f} \u20ac perdita"],
             ["Chiudi a 21 DTE",   f"Entro il {data_21dte}",              "Evita rischio Gamma elevato"],
             ["Delta ottimale",    "0.16 \u2013 0.20",                    "84\u201380% prob. di successo"],
             ["Apertura ideale",   "45 DTE",                              "Massima efficienza Theta decay"],
@@ -1913,8 +1913,8 @@ def genera_pdf_scenari(strategia, params):
         sl_credito  = round(credito * 2.00, 2)
         data_21dte  = (datetime.now() + __import__('datetime').timedelta(days=max(dte-21,0))).strftime("%d/%m/%Y")
         gest_rows = [
-            ["Take Profit 50%",   f"Chiudi spread a {tp_credito:.2f} costo", f"+{tp_val:.0f} \u20ac incassati"],
-            ["Stop Loss 2x",      f"Chiudi se spread vale {sl_credito:.2f}", f"-{sl_val:.0f} \u20ac perdita"],
+            ["Take Profit 50%",   f"Chiudi spread a {tp_credito:.2f} costo", f"+{tp_val:.2f} \u20ac incassati"],
+            ["Stop Loss 2x",      f"Chiudi se spread vale {sl_credito:.2f}", f"-{sl_val:.2f} \u20ac perdita"],
             ["Chiudi a 21 DTE",   f"Entro il {data_21dte}",                  "Evita rischio Gamma elevato"],
             ["Margine bloccato",  f"{params.get('bps_margine_tot', 0):.0f} \u20ac",  f"{params.get('n_contratti',n)} contratti \u00d7 {params.get('bps_margine_c', 0):.0f} \u20ac"],
             ["IV Rank minimo",    "> 30\u201340 / 100",                      "Premi strutturalmente elevati"],
@@ -1968,7 +1968,7 @@ def genera_pdf_scenari(strategia, params):
             pnl_az = round(prem - vp, 2)
             pnl_t  = round(pnl_az * n * mult, 0)
             esito  = "\u2713 Prof." if pnl_t >= 0 else "\u2717 Perd."
-            rows.append([f"{sp:.2f}", f"{vp:.2f}", f"{pnl_az:+.2f}", f"{pnl_t:+.0f}", esito])
+            rows.append([f"{sp:.2f}", f"{vp:.2f}", f"{pnl_az:+.2f}", f"{pnl_t:+.2f}", esito])
         else:
             vv     = bs_put_price(sp, K_v, T_residuo, r, sigma)
             vc     = bs_put_price(sp, K_c, T_residuo, r, sigma)
@@ -1977,7 +1977,7 @@ def genera_pdf_scenari(strategia, params):
             pnl_t  = round(pnl_az * n * mult, 0)
             esito  = "\u2713 Prof." if pnl_t >= 0 else "\u2717 Perd."
             rows.append([f"{sp:.2f}", f"{vv:.2f}", f"{vc:.2f}", f"{vspr:.2f}",
-                         f"{pnl_az:+.2f}", f"{pnl_t:+.0f}", esito])
+                         f"{pnl_az:+.2f}", f"{pnl_t:+.2f}", esito])
 
     if strategia == "put_scoperta":
         cw = [total_w*0.19, total_w*0.17, total_w*0.19, total_w*0.22, total_w*0.23]
@@ -2041,9 +2041,9 @@ def genera_pdf_scenari(strategia, params):
 
     n_prof = sum(1 for row in rows[1:] if "\u2713" in row[-1])
     if strategia == "put_scoperta":
-        perdita_max = f"{-(K - prem)*n*mult:.0f} \u20ac (teorica)"
+        perdita_max = f"{-(K - prem)*n*mult:.2f} \u20ac (teorica)"
     else:
-        perdita_max = f"{-(K_v-K_c-credito)*n*mult:.0f} \u20ac"
+        perdita_max = f"{-(K_v-K_c-credito)*n*mult:.2f} \u20ac"
 
     story.append(Paragraph(
         f"<b>Riepilogo:</b> {n_prof}/30 livelli in profitto, {30-n_prof} in perdita.  "
@@ -2638,7 +2638,7 @@ if STRATEGIA == "put_scoperta":
                 <span class="tip-icon">?</span>
                 <div class="tip-box">Il margine è la liquidità bloccata come garanzia dal broker. Non è un costo &mdash; rimane tuo &mdash; ma non puoi usarla per altri trade. Il valore è una stima: verifica sempre sul tuo broker prima di operare.</div>
             </div>
-            <div class="kpi-value gold">{fmt(marg_tot,0)} &euro;</div>
+            <div class="kpi-value gold">{fmt(marg_tot,2)} &euro;</div>
             <div class="kpi-sub">{fmt(mc,0)} &euro; &times; {n_contratti} contratti</div>
             <div><span class="kpi-badge gold">DA AVERE SUL CONTO</span></div>
         </div>
@@ -2711,9 +2711,9 @@ if STRATEGIA == "put_scoperta":
         "Valore":    [nome, fmt(spot,2), fmt(K,2), f"{fmt(dist,2)}% sotto lo spot",
                       f"{dte} gg",
                       f"{fmt(prem,4)}  ({fmt(prem*100,2)} € / contratto 100 azioni)",
-                      str(n_contratti), f"{fmt(mc,0)} €",
-                      f"{fmt(marg_tot,0)} € (da avere sul conto)",
-                      f"+{fmt(ptot,0)} €",
+                      str(n_contratti), f"{fmt(mc,2)} €",
+                      f"{fmt(marg_tot,2)} € (da avere sul conto)",
+                      f"+{fmt(ptot,2)} €",
                       fmt(K-prem,2), f"+{fmt(thday,2)} € / giorno",
                       f"{fmt(rend,2)}% / mese  ({fmt(rend_ann,2)}% annuo composto stimato)"],
     }), use_container_width=True, hide_index=True,
@@ -2842,9 +2842,9 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
                       f"{fmt(bps_credito,4)} ({fmt(bps_credito*100,2)} € / contratto)",
                       str(n_contratti), f"{fmt(bps_margine_c,0)} €",
                       f"{fmt(bps_margine_tot,0)} € (da avere sul conto)",
-                      f"+{fmt(bps_credito_tot,0)} €",
-                      fmt(bps_be,2), f"+{fmt(bps_tp,0)} €",
-                      f"-{fmt(bps_sl,0)} €",
+                      f"+{fmt(bps_credito_tot,2)} €",
+                      fmt(bps_be,2), f"+{fmt(bps_tp,2)} €",
+                      f"-{fmt(bps_sl,2)} €",
                       f"{fmt(bps_rend,2)}% / mese  ({fmt(bps_rend_ann,2)}% annuo stimato)"],
     }), use_container_width=True, hide_index=True,
         column_config={
