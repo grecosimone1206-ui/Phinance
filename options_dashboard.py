@@ -1588,7 +1588,7 @@ def genera_pdf_scenari(strategia, params):
             ["Chiudi a 21 DTE",   f"Entro il {data_21dte}",              "Evita rischio Gamma elevato"],
             ["Delta ottimale",    "0.16 \u2013 0.20",                    "84\u201380% prob. di successo"],
             ["Apertura ideale",   "45 DTE",                              "Massima efficienza Theta decay"],
-            ["IV Rank minimo",    "> 50 / 100",                          "Regola Tastytrade \u2014 premi sufficienti"],
+            ["IV Rank minimo",    "> 50 / 100",                          "Regola quantitativa \u2014 premi sufficienti"],
         ]
     else:
         credito_tot = credito * n * mult
@@ -1766,7 +1766,7 @@ with st.sidebar:
     )
     tk = TICKER_DISPONIBILI[scelta]
     if tk == "MANUALE":
-        raw = st.text_input("Ticker Yahoo Finance", value="SPY", label_visibility="collapsed")
+        raw = st.text_input("Ticker", value="SPY", label_visibility="collapsed")
         tk  = raw.upper().strip()
 
     aggiorna = st.button("&#8635;  Aggiorna Tutti i Dati")
@@ -1778,7 +1778,7 @@ with st.sidebar:
     iv_pct = st.slider("IV IND (%)", 1.0, 150.0,
         float(st.session_state.get("_iv_pct_init", 20.0)), 0.5,
         key="iv_pct_slider",
-        help="Volatilità implicita del sottostante — lo stesso valore 'IV IND' che vedi su Tastytrade nella scheda del titolo.\nUsato da Black-Scholes per tutti i calcoli. Se hai attivato 'Usa IV IND reale' nella sezione Dati Reali, quel valore sovrascrive questo solo nel riquadro informativo — qui imposta comunque il parametro per i calcoli.")
+        help="Volatilità implicita del sottostante — il valore 'IV IND' visibile nella scheda del titolo sul tuo broker.\nUsato da Black-Scholes per tutti i calcoli. Se hai attivato 'Usa IV IND reale' nella sezione Dati Reali, quel valore sovrascrive questo solo nel riquadro informativo — qui imposta comunque il parametro per i calcoli.")
     r_pct = 4.5  # tasso risk-free fisso
 
     st.markdown("<div class='sb-section'>Posizione & Rischio</div>", unsafe_allow_html=True)
@@ -1786,7 +1786,7 @@ with st.sidebar:
         help="Quanti contratti vuoi vendere.\nOgni contratto copre 100 azioni del sottostante.")
     if STRATEGIA == "put_scoperta":
         marg_pct = st.slider("Margine Broker (%)", 5.0, 50.0, 15.0, 1.0,
-            help="% del valore dello strike bloccata come garanzia dal broker.\nIl broker tipicamente richiede il 15-20% per le put OTM su ETF.\nVerifica nelle impostazioni del tuo conto.")
+            help="% del valore dello strike bloccata come garanzia dal broker.\nTipicamente richiesto il 15-20% per le put OTM su ETF.\nVerifica sul tuo broker.")
     else:
         marg_pct = 15.0  # non usato nel BPS, margine calcolato automaticamente
     crash = 20.0  # scenario crisi fisso (usato internamente per calc_wcs)
@@ -1847,7 +1847,7 @@ with st.sidebar:
 
     # ── IV Rank manuale ──
     usa_ivrank_reale = st.toggle("Usa IV Rank reale",
-        help="Attiva per inserire l'IV Rank reale che vedi nella schermata del tuo broker.")
+        help="Attiva per inserire l'IV Rank reale che vedi sul tuo broker.")
     if usa_ivrank_reale:
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK REALE (0&ndash;100)</span>", unsafe_allow_html=True)
         iv_rank_reale = st.number_input("IV Rank reale", 0.0, 100.0,
@@ -2013,7 +2013,7 @@ if STRATEGIA == "bull_put_spread" and larghezza_spread and credito_reale_bps:
     bps_dist_sd     = (spot - bps_K_venduta) / bps_sigma_T if bps_sigma_T > 0 else 0
     # Semaforo regola credito ≥ 1/3 larghezza (Tastytrade)
     if bps_pct_largh >= 33:
-        bps_regola_cls = "ok"; bps_regola_txt = "Credito ottimale (≥33% — regola 1/3 Tastytrade)"
+        bps_regola_cls = "ok"; bps_regola_txt = "Credito ottimale (≥33% — regola 1/3 quantitativa)"
     elif bps_pct_largh >= 25:
         bps_regola_cls = "warn"; bps_regola_txt = "Credito accettabile (25–33%) — sotto la soglia ideale"
     else:
@@ -2157,7 +2157,7 @@ st.markdown(f"""
   <div class="kpi-card kpi-sm" style="animation-delay:0.0s">
     <div class="kpi-eyebrow greek-tooltip">&#9679; Prezzo Spot
         <span class="tip-icon">?</span>
-        <div class="tip-box">Prezzo di chiusura pi&ugrave; recente del sottostante selezionato, scaricato in tempo reale da Yahoo Finance. &Egrave; il riferimento base per tutti i calcoli di strike, premio e margine.</div>
+        <div class="tip-box">Prezzo di chiusura pi&ugrave; recente del sottostante selezionato, scaricato in tempo reale. &Egrave; il riferimento base per tutti i calcoli di strike, premio e margine.</div>
     </div>
     <div class="kpi-value {spot_cls}">{fmt(spot,2)}</div>
     <div class="kpi-sub">Aggiornato<br>{ts_spot}</div>
@@ -2177,7 +2177,7 @@ st.markdown(f"""
   <div class="kpi-card kpi-sm" style="animation-delay:0.12s">
     <div class="kpi-eyebrow greek-tooltip">&#9679; IV Rank
         <span class="tip-icon">?</span>
-        <div class="tip-box">Indica quanto è alta la volatilità implicita attuale rispetto agli ultimi 12 mesi. 0 = minimo storico, 100 = massimo storico. Sopra 50 = buon momento per vendere opzioni (regola Tastytrade). Sotto 30 = premi troppo bassi, meglio aspettare.</div>
+        <div class="tip-box">Indica quanto è alta la volatilità implicita attuale rispetto agli ultimi 12 mesi. 0 = minimo storico, 100 = massimo storico. Sopra 50 = buon momento per vendere opzioni (regola quantitativa). Sotto 30 = premi troppo bassi, meglio aspettare.</div>
     </div>
     <div class="kpi-value {ivr_cls}">{fmt(iv_rank,0)} / 100</div>
     <div class="kpi-sub">Aggiornato<br>{ts_ivr}</div>
@@ -2197,7 +2197,7 @@ st.markdown(f"""
   <div class="kpi-card kpi-sm" style="animation-delay:0.24s">
     <div class="kpi-eyebrow greek-tooltip">&#9679; IV IND
         <span class="tip-icon">?</span>
-        <div class="tip-box">IV implicita dello strumento, calcolata sulle sue opzioni quotate. Su Tastytrade: scheda titolo → &ldquo;IV IND&rdquo;. Alta = premi gonfiati, ottimo per vendere. Bassa = aspetta.</div>
+        <div class="tip-box">IV implicita dello strumento, calcolata sulle sue opzioni quotate. Alta = premi gonfiati, ottimo per vendere. Bassa = aspetta.</div>
     </div>
     <div class="kpi-value {iv_ind_cls}">{fmt(iv_ind,1)}%</div>
     <div class="kpi-sub">{iv_ind_fonte}</div>
@@ -2277,7 +2277,7 @@ if STRATEGIA == "put_scoperta":
         <div class="kpi-card" style="animation-delay:0.18s">
             <div class="kpi-eyebrow greek-tooltip">&#9679; Margine Richiesto
                 <span class="tip-icon">?</span>
-                <div class="tip-box">Il margine &egrave; la liquidit&agrave; che il broker blocca come garanzia. Non &egrave; un costo &mdash; rimane tuo &mdash; ma non puoi usarla per altri trade. Il valore &egrave; una stima: verifica sempre sul tuo broker prima di operare.</div>
+                <div class="tip-box">Il margine è la liquidità bloccata come garanzia dal broker. Non è un costo &mdash; rimane tuo &mdash; ma non puoi usarla per altri trade. Il valore è una stima: verifica sempre sul tuo broker prima di operare.</div>
             </div>
             <div class="kpi-value gold">{fmt(marg_tot,0)} &euro;</div>
             <div class="kpi-sub">{fmt(mc,0)} &euro; &times; {n_contratti} contratti</div>
@@ -2403,7 +2403,7 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
         <div class="kpi-card" style="animation-delay:0.12s">
             <div class="kpi-eyebrow greek-tooltip">&#9679; Credito Netto
                 <span class="tip-icon">?</span>
-                <div class="tip-box">Il credito netto è la differenza tra il premio incassato e quello pagato. Secondo la regola Tastytrade deve essere almeno 1/3 (≈33%) della larghezza dello spread ({larghezza_spread}$) per avere un valore atteso positivo. Sotto il 25% il trade non è efficiente.</div>
+                <div class="tip-box">Il credito netto è la differenza tra il premio incassato e quello pagato. Secondo la regola quantitativa deve essere almeno 1/3 (≈33%) della larghezza dello spread ({larghezza_spread}$) per avere un valore atteso positivo. Sotto il 25% il trade non è efficiente.</div>
             </div>
             <div class="kpi-value {cred_cls}">{fmt(bps_credito,2)}</div>
             <div class="kpi-sub">{n_contratti} contratti &rarr; <strong style="color:var(--accent-green)">+{fmt(bps_credito_tot,0)} &euro;</strong></div>
@@ -2460,7 +2460,7 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
     with a3:
         st.markdown(f"""<div style="{_sa}"><div style="{_e}" class="greek-tooltip">Distanza SD<span class="tip-icon">?</span><div class="tip-box">Quante deviazioni standard di distanza si trova lo strike venduto rispetto allo spot attuale. Sopra 1 SD = molto OTM, alta probabilit&agrave; di successo. Sotto 0.5 SD = rischioso.</div></div><div style="{_v};font-size:1.2rem;color:var(--accent-cyan)">{sd_label}</div><div style="{_b}">dal strike venduto</div></div>""", unsafe_allow_html=True)
     with a4:
-        st.markdown(f"""<div style="{_sa}"><div style="{_e}" class="greek-tooltip">Take Profit 50%<span class="tip-icon">?</span><div class="tip-box">Livello consigliato per chiudere il trade in anticipo. Riacquistando lo spread a met&agrave; del credito incassato si libera il margine e si riduce il rischio residuo. &Egrave; la gestione standard tastytrade.</div></div><div style="{_v};font-size:1.2rem;color:var(--accent-green)">+{fmt(bps_tp,0)} &euro;</div><div style="{_b}">chiudi qui</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="{_sa}"><div style="{_e}" class="greek-tooltip">Take Profit 50%<span class="tip-icon">?</span><div class="tip-box">Livello consigliato per chiudere il trade in anticipo. Riacquistando lo spread a met&agrave; del credito incassato si libera il margine e si riduce il rischio residuo. &Egrave; la gestione standard raccomandata dalla ricerca quantitativa.</div></div><div style="{_v};font-size:1.2rem;color:var(--accent-green)">+{fmt(bps_tp,0)} &euro;</div><div style="{_b}">chiudi qui</div></div>""", unsafe_allow_html=True)
     with a5:
         st.markdown(f"""<div style="{_sa}"><div style="{_e}" class="greek-tooltip">Stop Loss 2x<span class="tip-icon">?</span><div class="tip-box">Livello di uscita in perdita: se il costo per chiudere lo spread raggiunge il doppio del credito incassato, esci. Limita la perdita massima gestita a 2 volte il premio ricevuto.</div></div><div style="{_v};font-size:1.2rem;color:var(--accent-red)">-{fmt(bps_sl,0)} &euro;</div><div style="{_b}">perdita max gestita</div></div>""", unsafe_allow_html=True)
     with a6:
