@@ -2667,38 +2667,6 @@ if STRATEGIA == "put_scoperta":
         st.markdown(f'<div style="{_s}"><div style="{_e}">Rendimento</div><div style="{_v};font-size:1.2rem;color:var(--accent-green)">{fmt(rend,2)}% / mese</div><div style="{_b}">{fmt(rend_ann,2)}% / anno</div></div>', unsafe_allow_html=True)
     st.markdown("<div style='margin-top:2rem'></div>", unsafe_allow_html=True)
 
-    # ── GRECHE ──
-    delta_display = delta_reale if delta_reale is not None else abs(gre['delta'])
-    theta_display = theta_reale if theta_reale is not None else abs(gre['theta']) * 100
-    delta_fonte = "Reale (broker)" if delta_reale is not None else "Black-Scholes (stimato)"
-    theta_fonte = "Reale (broker)" if theta_reale is not None else "Black-Scholes (stimato)"
-
-    st.markdown(f"""
-    <div class="panel" style="animation-delay:0.3s;margin-bottom:1.5rem">
-        <div class="panel-title"><span style="color:var(--accent-cyan);margin-right:0.4rem">&#8721;</span> Lettere Greche</div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0">
-            <div style="padding:1.2rem 1.8rem;border-right:1px solid rgba(255,255,255,0.04)">
-                <div class="panel-key greek-tooltip" style="margin-bottom:0.5rem">
-                    &#916; Delta (prob. ITM)
-                    <span class="tip-icon">?</span>
-                    <div class="tip-box">Misura quanto varia il premio per ogni $1 di movimento del sottostante. In valore assoluto = probabilit&agrave; che l&apos;opzione scada ITM (in perdita). Ottimale: 0.15&ndash;0.20.</div>
-                </div>
-                <div class="panel-val cyan" style="font-size:1.6rem">{fmt(delta_display,2)}</div>
-                <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--text-secondary);margin-top:0.4rem">{fmt(delta_display*100,1)}% prob. ITM &nbsp;&middot;&nbsp; <span style="color:var(--text-muted)">{delta_fonte}</span></div>
-            </div>
-            <div style="padding:1.2rem 1.8rem">
-                <div class="panel-key greek-tooltip" style="margin-bottom:0.5rem">
-                    &#920; Theta (&euro;/giorno)
-                    <span class="tip-icon">?</span>
-                    <div class="tip-box">Il tuo guadagno quotidiano dal passare del tempo (time decay). Vendendo put incassi theta positivo: ogni giorno che passa il valore dell&apos;opzione diminuisce e tu guadagni. &Egrave; il motore principale della strategia.</div>
-                </div>
-                <div class="panel-val green" style="font-size:1.6rem">+{fmt(theta_display,2)} &euro;</div>
-                <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--text-secondary);margin-top:0.4rem">guadagno per giorno &nbsp;&middot;&nbsp; <span style="color:var(--text-muted)">{theta_fonte}</span></div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
     # ── RIEPILOGO PUT SCOPERTA ──
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Riepilogo Operazione</span>", unsafe_allow_html=True)
     st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
