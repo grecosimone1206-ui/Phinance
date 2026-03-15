@@ -2327,12 +2327,28 @@ with st.sidebar:
         use_container_width=True,
         help="Genera un PDF scaricabile con l'analisi completa della posizione su una fascia -10%/+10% dallo spot, "
              "25 prezzi ciascuno con valore delle opzioni e P&L a scadenza.")
+    if "pdf_scenari_bytes" in st.session_state and st.session_state["pdf_scenari_bytes"]:
+        st.download_button(
+            label="⬇️ Scarica Report Scenari",
+            data=st.session_state["pdf_scenari_bytes"],
+            file_name=st.session_state.get("pdf_scenari_fname", "report.pdf"),
+            mime="application/pdf",
+            use_container_width=True,
+        )
 
     st.markdown("<div class='sb-section'>Analisi AI</div>", unsafe_allow_html=True)
     genera_ai_btn = st.button("Genera Report AI",
         use_container_width=True,
         help="Invia i parametri della posizione a Claude per un'analisi professionale del sottostante, "
              "della volatilità e della solidità del trade.")
+    if "pdf_ai_bytes" in st.session_state and st.session_state["pdf_ai_bytes"]:
+        st.download_button(
+            label="⬇️ Scarica Report AI",
+            data=st.session_state["pdf_ai_bytes"],
+            file_name=st.session_state.get("pdf_ai_fname", "report_ai.pdf"),
+            mime="application/pdf",
+            use_container_width=True,
+        )
 
 
 # ═══════════════════════════════════════════════════════════
@@ -2462,14 +2478,10 @@ if genera_pdf_btn:
     if pdf_bytes:
         ticker_clean = tk.replace("^", "").upper()
         fname = f"phinance_scenari_{ticker_clean}_{datetime.now().strftime('%Y%m%d')}.pdf"
-        st.sidebar.download_button(
-            label="⬇️ Scarica il PDF",
-            data=pdf_bytes,
-            file_name=fname,
-            mime="application/pdf",
-            use_container_width=True,
-        )
-        st.sidebar.success("Report pronto! Clicca per scaricare.")
+        st.session_state["pdf_scenari_bytes"] = pdf_bytes
+        st.session_state["pdf_scenari_fname"] = fname
+        st.session_state["pdf_ai_bytes"] = None  # reset AI
+        st.rerun()
     else:
         st.sidebar.error("Errore nella generazione del PDF. Verifica che reportlab sia installato.")
 
@@ -2502,14 +2514,10 @@ if genera_ai_btn:
         if pdf_ai:
             ticker_clean = tk.replace("^", "").upper()
             fname_ai = f"phinance_ai_{ticker_clean}_{datetime.now().strftime('%Y%m%d')}.pdf"
-            st.sidebar.download_button(
-                label="⬇️ Scarica Report AI",
-                data=pdf_ai,
-                file_name=fname_ai,
-                mime="application/pdf",
-                use_container_width=True,
-            )
-            st.sidebar.success("Report AI pronto! Clicca per scaricare.")
+            st.session_state["pdf_ai_bytes"] = pdf_ai
+            st.session_state["pdf_ai_fname"] = fname_ai
+            st.session_state["pdf_scenari_bytes"] = None  # reset scenari
+            st.rerun()
 
 # ═══════════════════════════════════════════════════════════
 # RENDER UI
