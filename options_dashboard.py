@@ -1622,7 +1622,7 @@ def genera_pdf_scenari(strategia, params):
         ("TEXTCOLOR",     (2,1), (2,1),   RED),
     ])
     col_w3 = [total_w*0.26, total_w*0.37, total_w*0.37]
-    story.append(Table(gest_rows, colWidths=col_w3, style=TableStyle(gest_style)))
+    story.append(Table(gest_rows, colWidths=col_w3, style=gest_style))
     story.append(PageBreak())
 
     # ═══════════════════════════════════════════════════════
