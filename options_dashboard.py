@@ -1595,10 +1595,22 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
                               alignment=align, leading=leading or size*1.4,
                               spaceBefore=spaceBefore, spaceAfter=spaceAfter)
 
-    s_title   = ps("t",  "Helvetica-Bold", 18, CYAN,  spaceAfter=4)
-    s_sub     = ps("s",  "Helvetica",       9, MUTED, spaceAfter=6)
-    s_section = ps("h2", "Helvetica-Bold", 10, CYAN,  spaceBefore=10, spaceAfter=3)
-    s_body    = ps("b",  "Helvetica",       8, TEXT,  leading=13, spaceAfter=2)
+    s_title    = ps("t",    "Helvetica-Bold", 18, CYAN,  spaceAfter=4)
+    s_sub      = ps("s",    "Helvetica",       9, MUTED, spaceAfter=6)
+    s_section  = ps("h2",   "Helvetica-Bold", 10, CYAN,  spaceBefore=10, spaceAfter=3)
+    s_body     = ps("b",    "Helvetica",       8, TEXT,  leading=13, spaceAfter=2)
+    s_solida   = ps("sol",  "Helvetica-Bold",  9, GREEN, spaceAfter=2)
+    s_accett   = ps("acc",  "Helvetica-Bold",  9, colors.HexColor("#FFB547"), spaceAfter=2)
+    s_risch    = ps("ris",  "Helvetica-Bold",  9, colors.HexColor("#FF5A5A"), spaceAfter=2)
+
+    # I 5 titoli sezione attesi — usati per distinguerli dai punti elenco nel corpo
+    TITOLI_SEZIONE = {
+        "1. ANALISI DEL SOTTOSTANTE",
+        "2. LETTURA DELLA VOLATILITÀ",
+        "3. VALUTAZIONE DELLA POSIZIONE",
+        "4. RISCHI SPECIFICI DA MONITORARE",
+        "5. INDICATORI DA TENERE D'OCCHIO",
+    }
 
     story = []
     story.append(Spacer(1, 0.5*cm))
@@ -1609,15 +1621,22 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
 
     import re as _re
 
-    def pulisci(testo):
-        """Rimuove markdown: **testo** → testo, ## testo → testo, * elenco → testo"""
-        testo = _re.sub(r'\*\*(.*?)\*\*', r'\1', testo)   # bold
-        testo = _re.sub(r'\*(.*?)\*',     r'\1', testo)   # italic
-        testo = _re.sub(r'^#{1,3}\s*',    '',    testo, flags=_re.MULTILINE)  # headers
-        testo = _re.sub(r'^\s*[-•]\s*',   '',    testo, flags=_re.MULTILINE)  # bullets
-        return testo.strip()
+    def pulisci(t):
+        t = _re.sub(r'\*\*(.*?)\*\*', r'\1', t)
+        t = _re.sub(r'\*(.*?)\*',     r'\1', t)
+        t = _re.sub(r'^#{1,3}\s*',    '',    t, flags=_re.MULTILINE)
+        t = _re.sub(r'^\s*[-•]\s*',   '',    t, flags=_re.MULTILINE)
+        return t.strip()
 
-    # Splitta per separatori ──────
+    def is_titolo_sezione(r):
+        """True solo se la riga corrisponde a uno dei 5 titoli sezione attesi."""
+        r_upper = _re.sub(r'^[1-5][\.\)]\s*', lambda m: m.group(0), r).upper().strip()
+        # Controlla corrispondenza esatta o parziale con i titoli attesi
+        for t in TITOLI_SEZIONE:
+            if t in r_upper or r_upper in t:
+                return True
+        return False
+
     sezioni = _re.split(r'─{10,}', testo)
     for blocco in sezioni:
         blocco = blocco.strip()
@@ -1626,9 +1645,9 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
         righe = [r for r in blocco.split("\n") if r.strip()]
         if not righe:
             continue
-        # Prima riga = titolo se inizia con numero
+
         prima = pulisci(righe[0])
-        if prima and _re.match(r'^[1-5][\.\)]?\s+[A-ZÀÈÌÒÙ]', prima):
+        if is_titolo_sezione(prima):
             story.append(Spacer(1, 0.2*cm))
             story.append(Paragraph(prima.upper(), s_section))
             story.append(HRFlowable(width="100%", thickness=0.3, color=BORDER))
@@ -1639,7 +1658,23 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
 
         for riga in corpo:
             riga = pulisci(riga)
-            if riga:
+            if not riga:
+                continue
+            # Colora giudizio posizione
+            r_up = riga.upper().strip()
+            if r_up in ("SOLIDA", "✓ SOLIDA", "POSIZIONE: SOLIDA"):
+                story.append(Paragraph(riga, s_solida))
+            elif r_up in ("ACCETTABILE", "✓ ACCETTABILE", "POSIZIONE: ACCETTABILE"):
+                story.append(Paragraph(riga, s_accett))
+            elif r_up in ("RISCHIOSA", "✗ RISCHIOSA", "POSIZIONE: RISCHIOSA"):
+                story.append(Paragraph(riga, s_risch))
+            elif "SOLIDA" in r_up and len(riga) < 30:
+                story.append(Paragraph(riga, s_solida))
+            elif "ACCETTABILE" in r_up and len(riga) < 30:
+                story.append(Paragraph(riga, s_accett))
+            elif "RISCHIOSA" in r_up and len(riga) < 30:
+                story.append(Paragraph(riga, s_risch))
+            else:
                 story.append(Paragraph(riga, s_body))
 
     doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
