@@ -2227,7 +2227,8 @@ with st.sidebar:
         prezzo_put_venduta = None
         prezzo_put_comprata = None
 
-    st.markdown("<div class='sb-section'>Dati Reali dal Broker</div>", unsafe_allow_html=True)
+    if STRATEGIA == "put_scoperta":
+        st.markdown("<div class='sb-section'>Dati Reali dal Broker</div>", unsafe_allow_html=True)
 
     iv_ind_reale = None  # IV IND gestita direttamente dallo slider sopra
 
@@ -2294,13 +2295,13 @@ with st.sidebar:
 
     # ── PULSANTE GENERA PDF ──────────────────────────────────────────────────
     st.markdown("<div class='sb-section'>Analisi Scenari</div>", unsafe_allow_html=True)
-    genera_pdf_btn = st.button("📄 Genera Report Scenari PDF",
+    genera_pdf_btn = st.button("Genera Report Scenari",
         use_container_width=True,
         help="Genera un PDF scaricabile con l'analisi completa della posizione su una fascia -10%/+10% dallo spot, "
              "25 prezzi ciascuno con valore delle opzioni e P&L a scadenza.")
 
     st.markdown("<div class='sb-section'>Analisi AI</div>", unsafe_allow_html=True)
-    genera_ai_btn = st.button("🤖 Genera Report AI",
+    genera_ai_btn = st.button("Genera Report AI",
         use_container_width=True,
         help="Invia i parametri della posizione a Claude per un'analisi professionale del sottostante, "
              "della volatilità e della solidità del trade.")
