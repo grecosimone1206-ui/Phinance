@@ -2138,7 +2138,7 @@ with st.sidebar:
     st.markdown("<div class='sb-section'>Posizione & Rischio</div>", unsafe_allow_html=True)
 
     # ── NUMERO CONTRATTI ──
-    if "_nc_val" not in st.session_state: st.session_state["_nc_val"] = 3
+    if "_nc_val" not in st.session_state: st.session_state["_nc_val"] = 1
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>NUMERO DI CONTRATTI</span>", unsafe_allow_html=True)
     col_s, col_n = st.columns([2,1])
     with col_s:
