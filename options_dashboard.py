@@ -1368,30 +1368,70 @@ def calc_wcs(S, K, prem, n, crash, mult=100):
     }
 
 def chiama_claude(prompt: str) -> str:
-    """Chiama Claude API con il prompt fornito. Restituisce il testo della risposta."""
+    """Chiama Claude API con web search abilitato. Gestisce il loop tool-use automaticamente."""
     import os, urllib.request, json as _json
+
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
-        return "ERRORE: variabile ANTHROPIC_API_KEY non trovata. Configurala nelle variabili d'ambiente o nei Secrets di Streamlit Cloud."
-    payload = _json.dumps({
-        "model": "claude-haiku-4-5-20251001",
-        "max_tokens": 1500,
-        "messages": [{"role": "user", "content": prompt}]
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-        },
-        method="POST"
-    )
+        return "ERRORE: variabile ANTHROPIC_API_KEY non trovata. Configurala nei Secrets di Streamlit Cloud."
+
+    def _post(payload: dict) -> dict:
+        data = _json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "anthropic-beta": "web-search-2025-03-05",
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return _json.loads(resp.read().decode("utf-8"))
+
+    messages = [{"role": "user", "content": prompt}]
+    payload = {
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 2000,
+        "tools": [{"type": "web_search_20250305", "name": "web_search"}],
+        "messages": messages,
+    }
+
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = _json.loads(resp.read().decode("utf-8"))
-            return data["content"][0]["text"]
+        # Loop tool-use: continua finché stop_reason != "end_turn"
+        for _ in range(6):  # max 6 iterazioni di ricerca
+            resp = _post(payload)
+            stop = resp.get("stop_reason", "end_turn")
+
+            if stop == "end_turn":
+                # Estrai tutto il testo dai blocchi content
+                testo = " ".join(
+                    b["text"] for b in resp.get("content", [])
+                    if b.get("type") == "text"
+                )
+                return testo.strip()
+
+            if stop == "tool_use":
+                # Aggiungi risposta assistant al contesto
+                messages.append({"role": "assistant", "content": resp["content"]})
+                # Costruisci tool_result per ogni tool_use
+                tool_results = []
+                for block in resp["content"]:
+                    if block.get("type") == "tool_use":
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block["id"],
+                            "content": block.get("content", ""),
+                        })
+                messages.append({"role": "user", "content": tool_results})
+                payload["messages"] = messages
+            else:
+                break
+
+        return "ERRORE: risposta inattesa dal modello."
+
     except Exception as e:
         return f"ERRORE chiamata API: {e}"
 
@@ -1442,6 +1482,12 @@ def costruisci_prompt_ai(strategia, params, dati_mercato) -> str:
 
     prompt = f"""Agisci come un Senior Derivatives Analyst specializzato in strategie short premium su opzioni.
 
+IMPORTANTE: Prima di rispondere, usa il web search per cercare:
+1. Notizie recenti su {nome} ({tk}) degli ultimi 7 giorni
+2. Situazione attuale del mercato e sentiment (data di oggi: {datetime.now().strftime("%d/%m/%Y")})
+3. Prossimi eventi rilevanti per {tk} (dati macro, earnings, Fed, ecc.)
+Usa solo fonti aggiornate. Non usare mai dati del training se puoi trovarli con la ricerca.
+
 Ti vengono forniti i parametri di una posizione aperta su {nome} ({tk}), un {tipo_label}.
 
 PARAMETRI DELLA POSIZIONE:
@@ -1460,6 +1506,7 @@ Produci un report professionale e neutro in italiano, strutturato esattamente co
 1. ANALISI DEL SOTTOSTANTE
 ──────────────────────────────────────
 {contesto_tipo}
+Basati esclusivamente su notizie e dati trovati con la ricerca web di oggi.
 Massimo 5 righe. Sintetico e concreto.
 
 ──────────────────────────────────────
@@ -1481,12 +1528,13 @@ Seguito da motivazione in massimo 3 righe.
 4. RISCHI SPECIFICI DA MONITORARE
 ──────────────────────────────────────
 Elenca esattamente 3 rischi concreti e specifici per questa posizione nei prossimi {dte} giorni.
-Niente generalità — solo rischi reali e contestualizzati a questo sottostante e a questa strategia.
+Basati su eventi reali trovati con la ricerca web — niente generalità.
 
 ──────────────────────────────────────
 5. INDICATORI DA TENERE D'OCCHIO
 ──────────────────────────────────────
-Elenca esattamente 4 elementi: dati macro o societari imminenti, livelli tecnici chiave, scadenze rilevanti.
+Elenca esattamente 4 elementi con date reali: dati macro imminenti, eventi societari, livelli tecnici chiave.
+Usa solo eventi trovati con la ricerca web, con date precise.
 
 ──────────────────────────────────────
 Stile: professionale, neutro, sintetico. Niente previsioni di prezzo. Niente sensazionalismo.
@@ -1559,23 +1607,40 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
     story.append(Spacer(1, 0.3*cm))
 
-    # Parsa il testo per sezioni
-    sezioni = testo.split("──────────────────────────────────────")
+    import re as _re
+
+    def pulisci(testo):
+        """Rimuove markdown: **testo** → testo, ## testo → testo, * elenco → testo"""
+        testo = _re.sub(r'\*\*(.*?)\*\*', r'\1', testo)   # bold
+        testo = _re.sub(r'\*(.*?)\*',     r'\1', testo)   # italic
+        testo = _re.sub(r'^#{1,3}\s*',    '',    testo, flags=_re.MULTILINE)  # headers
+        testo = _re.sub(r'^\s*[-•]\s*',   '',    testo, flags=_re.MULTILINE)  # bullets
+        return testo.strip()
+
+    # Splitta per separatori ──────
+    sezioni = _re.split(r'─{10,}', testo)
     for blocco in sezioni:
         blocco = blocco.strip()
         if not blocco:
             continue
-        righe = blocco.split("\n")
-        titolo = righe[0].strip()
-        corpo  = "\n".join(r for r in righe[1:] if r.strip())
-        if titolo and any(c.isdigit() for c in titolo[:2]):
-            story.append(Paragraph(titolo, s_section))
+        righe = [r for r in blocco.split("\n") if r.strip()]
+        if not righe:
+            continue
+        # Prima riga = titolo se inizia con numero
+        prima = pulisci(righe[0])
+        if prima and _re.match(r'^[1-5][\.\)]?\s+[A-ZÀÈÌÒÙ]', prima):
+            story.append(Spacer(1, 0.2*cm))
+            story.append(Paragraph(prima.upper(), s_section))
             story.append(HRFlowable(width="100%", thickness=0.3, color=BORDER))
-        if corpo:
-            for riga in corpo.split("\n"):
-                riga = riga.strip()
-                if riga:
-                    story.append(Paragraph(riga, s_body))
+            story.append(Spacer(1, 0.1*cm))
+            corpo = righe[1:]
+        else:
+            corpo = righe
+
+        for riga in corpo:
+            riga = pulisci(riga)
+            if riga:
+                story.append(Paragraph(riga, s_body))
 
     doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
     buf.seek(0)
