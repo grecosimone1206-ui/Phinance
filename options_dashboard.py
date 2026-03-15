@@ -1367,6 +1367,221 @@ def calc_wcs(S, K, prem, n, crash, mult=100):
         "crash":    crash,
     }
 
+def chiama_claude(prompt: str) -> str:
+    """Chiama Claude API con il prompt fornito. Restituisce il testo della risposta."""
+    import os, urllib.request, json as _json
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return "ERRORE: variabile ANTHROPIC_API_KEY non trovata. Configurala nelle variabili d'ambiente o nei Secrets di Streamlit Cloud."
+    payload = _json.dumps({
+        "model": "claude-haiku-4-5-20251001",
+        "max_tokens": 1500,
+        "messages": [{"role": "user", "content": prompt}]
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        },
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+            return data["content"][0]["text"]
+    except Exception as e:
+        return f"ERRORE chiamata API: {e}"
+
+
+def costruisci_prompt_ai(strategia, params, dati_mercato) -> str:
+    """Costruisce il prompt per Claude in base al sottostante e alla strategia."""
+    spot     = params["spot"]
+    nome     = params["nome"]
+    tk       = params.get("ticker", "")
+    dte      = params["dte"]
+    sigma    = params["sigma"]
+    iv_rank  = params.get("iv_rank", 0)
+    vol_st   = params.get("vol_st", 0)
+    vix      = params.get("vix", 0)
+    var      = params.get("var", 0)
+
+    # Tipo sottostante
+    indici = ["SPY", "QQQ", "^GSPC", "^DJI", "IVV", "VOO"]
+    is_indice = any(i in tk.upper() for i in indici)
+    tipo_label = "indice azionario" if is_indice else "azione"
+
+    if strategia == "put_scoperta":
+        K      = params["K"]
+        prem   = params["prem"]
+        n      = params["n_contratti"]
+        mc     = params.get("mc", 0)
+        marg   = params.get("marg_tot", mc * n)
+        credito_tot = round(prem * n * 100, 2)
+        strat_str = f"Put Scoperta — Strike {K:.2f}, Premio {prem:.4f}/az., Credito totale +{credito_tot:.0f}€, Margine {marg:.0f}€"
+    else:
+        K_v    = params["bps_K_venduta"]
+        K_c    = params["bps_K_comprata"]
+        credito= params["bps_credito"]
+        n      = params["n_contratti"]
+        marg   = params.get("bps_margine_tot", 0)
+        credito_tot = round(credito * n * 100, 2)
+        strat_str = (f"Bull Put Spread — Strike venduto {K_v:.2f} / Strike comprato {K_c:.2f}, "
+                     f"Credito netto {credito:.2f}/az. (+{credito_tot:.0f}€ totale), Margine {marg:.0f}€")
+
+    contesto_tipo = (
+        "Analizza il contesto macro USA: Fed, tassi di interesse, inflazione, stagionalità degli indici, "
+        "sentiment risk-on/risk-off e trend recente del mercato azionario americano."
+        if is_indice else
+        "Analizza il contesto societario e settoriale: trend del settore di appartenenza, "
+        "momentum relativo vs indice di riferimento (S&P 500), eventuali catalyst imminenti "
+        "(earnings, guidance, news rilevanti) e posizionamento rispetto al mercato."
+    )
+
+    prompt = f"""Agisci come un Senior Derivatives Analyst specializzato in strategie short premium su opzioni.
+
+Ti vengono forniti i parametri di una posizione aperta su {nome} ({tk}), un {tipo_label}.
+
+PARAMETRI DELLA POSIZIONE:
+- Strategia: {strat_str}
+- Prezzo spot: {spot:.2f}
+- Variazione giornaliera: {var:+.2f}%
+- DTE: {dte} giorni
+- IV IND: {sigma*100:.1f}%
+- IV Rank: {iv_rank:.0f}/100
+- Volatilità storica 30gg: {vol_st:.1f}%
+- VIX: {vix:.2f}
+
+Produci un report professionale e neutro in italiano, strutturato esattamente così:
+
+──────────────────────────────────────
+1. ANALISI DEL SOTTOSTANTE
+──────────────────────────────────────
+{contesto_tipo}
+Massimo 5 righe. Sintetico e concreto.
+
+──────────────────────────────────────
+2. LETTURA DELLA VOLATILITÀ
+──────────────────────────────────────
+Analizza il rapporto tra IV IND ({sigma*100:.1f}%), IV Rank ({iv_rank:.0f}/100) e Vol. Storica ({vol_st:.1f}%).
+Il VIX è a {vix:.2f}.
+Rispondi: è un buon momento per vendere premium su questo sottostante?
+La volatilità implicita compensa adeguatamente il rischio?
+
+──────────────────────────────────────
+3. VALUTAZIONE DELLA POSIZIONE
+──────────────────────────────────────
+Valuta se la struttura del trade è solida nel contesto attuale.
+Dai un giudizio netto su una sola riga: SOLIDA / ACCETTABILE / RISCHIOSA
+Seguito da motivazione in massimo 3 righe.
+
+──────────────────────────────────────
+4. RISCHI SPECIFICI DA MONITORARE
+──────────────────────────────────────
+Elenca esattamente 3 rischi concreti e specifici per questa posizione nei prossimi {dte} giorni.
+Niente generalità — solo rischi reali e contestualizzati a questo sottostante e a questa strategia.
+
+──────────────────────────────────────
+5. INDICATORI DA TENERE D'OCCHIO
+──────────────────────────────────────
+Elenca esattamente 4 elementi: dati macro o societari imminenti, livelli tecnici chiave, scadenze rilevanti.
+
+──────────────────────────────────────
+Stile: professionale, neutro, sintetico. Niente previsioni di prezzo. Niente sensazionalismo.
+Lunghezza totale: massimo una pagina A4."""
+    return prompt
+
+
+def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes | None:
+    """Genera un PDF con l'analisi AI della posizione."""
+    if not REPORTLAB_OK:
+        return None
+    import io as _io
+    buf = _io.BytesIO()
+    W, H = A4
+    BG      = colors.HexColor("#080C10")
+    CYAN    = colors.HexColor("#00C2FF")
+    GREEN   = colors.HexColor("#00E5A0")
+    MUTED   = colors.HexColor("#8B9FC0")
+    SURFACE = colors.HexColor("#0F1E2E")
+    BORDER  = colors.HexColor("#243550")
+    WHITE   = colors.HexColor("#E8EDF5")
+    DARK    = colors.HexColor("#060A0E")
+    TEXT    = colors.HexColor("#C8D4E8")
+    data_oggi = datetime.now().strftime("%d/%m/%Y")
+    strat_label = "Vendita Put Scoperta" if strategia == "put_scoperta" else "Bull Put Spread"
+
+    def on_page(canv, doc):
+        canv.saveState()
+        canv.setFillColor(BG)
+        canv.rect(0, 0, W, H, fill=1, stroke=0)
+        canv.setFillColor(DARK)
+        canv.rect(0, H - 1.6*cm, W, 1.6*cm, fill=1, stroke=0)
+        canv.setFont("Helvetica-Bold", 12)
+        canv.setFillColor(CYAN)
+        canv.drawString(1.5*cm, H - 1.05*cm, "Phinance")
+        canv.setFont("Helvetica", 8)
+        canv.setFillColor(WHITE)
+        canv.drawString(4.2*cm, H - 1.05*cm, f"| Analisi AI — {strat_label} — {nome} ({ticker})")
+        canv.setFillColor(MUTED)
+        canv.drawRightString(W - 1.5*cm, H - 1.05*cm, data_oggi)
+        canv.setStrokeColor(BORDER)
+        canv.setLineWidth(0.5)
+        canv.line(1.5*cm, H - 1.6*cm, W - 1.5*cm, H - 1.6*cm)
+        canv.setFont("Helvetica", 7)
+        canv.setFillColor(MUTED)
+        canv.drawCentredString(W/2, 0.65*cm,
+            "Solo a scopo educativo — non costituisce consulenza finanziaria — Phinance v5.1")
+        canv.line(1.5*cm, 1.05*cm, W - 1.5*cm, 1.05*cm)
+        canv.restoreState()
+
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2.4*cm, bottomMargin=1.8*cm)
+
+    def ps(name, font="Helvetica", size=9, color=None, align=TA_LEFT, leading=None, spaceBefore=0, spaceAfter=0):
+        c = color if color is not None else TEXT
+        return ParagraphStyle(name, fontName=font, fontSize=size, textColor=c,
+                              alignment=align, leading=leading or size*1.4,
+                              spaceBefore=spaceBefore, spaceAfter=spaceAfter)
+
+    s_title   = ps("t",  "Helvetica-Bold", 18, CYAN,  spaceAfter=4)
+    s_sub     = ps("s",  "Helvetica",       9, MUTED, spaceAfter=6)
+    s_section = ps("h2", "Helvetica-Bold", 10, CYAN,  spaceBefore=10, spaceAfter=3)
+    s_body    = ps("b",  "Helvetica",       8, TEXT,  leading=13, spaceAfter=2)
+
+    story = []
+    story.append(Spacer(1, 0.5*cm))
+    story.append(Paragraph("Analisi AI della Posizione", s_title))
+    story.append(Paragraph(f"{nome} ({ticker})  ·  {strat_label}  ·  {data_oggi}", s_sub))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+    story.append(Spacer(1, 0.3*cm))
+
+    # Parsa il testo per sezioni
+    sezioni = testo.split("──────────────────────────────────────")
+    for blocco in sezioni:
+        blocco = blocco.strip()
+        if not blocco:
+            continue
+        righe = blocco.split("\n")
+        titolo = righe[0].strip()
+        corpo  = "\n".join(r for r in righe[1:] if r.strip())
+        if titolo and any(c.isdigit() for c in titolo[:2]):
+            story.append(Paragraph(titolo, s_section))
+            story.append(HRFlowable(width="100%", thickness=0.3, color=BORDER))
+        if corpo:
+            for riga in corpo.split("\n"):
+                riga = riga.strip()
+                if riga:
+                    story.append(Paragraph(riga, s_body))
+
+    doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+    buf.seek(0)
+    return buf.getvalue()
+
+
 def genera_pdf_scenari(strategia, params):
     """
     Genera un PDF con UN unico scenario completo spot -10% → +10%,
@@ -1927,6 +2142,12 @@ with st.sidebar:
         help="Genera un PDF scaricabile con l'analisi completa della posizione su una fascia -10%/+10% dallo spot, "
              "25 prezzi ciascuno con valore delle opzioni e P&L a scadenza.")
 
+    st.markdown("<div class='sb-section'>Analisi AI</div>", unsafe_allow_html=True)
+    genera_ai_btn = st.button("🤖 Genera Report AI",
+        use_container_width=True,
+        help="Invia i parametri della posizione a Claude per un'analisi professionale del sottostante, "
+             "della volatilità e della solidità del trade.")
+
 
 # ═══════════════════════════════════════════════════════════
 # RECUPERO DATI
@@ -2065,6 +2286,44 @@ if genera_pdf_btn:
         st.sidebar.success("Report pronto! Clicca per scaricare.")
     else:
         st.sidebar.error("Errore nella generazione del PDF. Verifica che reportlab sia installato.")
+
+# ── REPORT AI ──
+if genera_ai_btn:
+    ai_params = {
+        "spot": spot, "nome": nome, "ticker": tk,
+        "dte": dte, "sigma": sigma,
+        "iv_rank": iv_rank, "vol_st": vol_st,
+        "vix": vix_val or 0, "var": var,
+        "n_contratti": n_contratti,
+    }
+    if STRATEGIA == "put_scoperta":
+        ai_params.update({"K": K, "prem": prem,
+                          "mc": mc, "marg_tot": marg_tot})
+    else:
+        ai_params.update({
+            "bps_K_venduta": bps_K_venduta,
+            "bps_K_comprata": bps_K_comprata,
+            "bps_credito": bps_credito,
+            "bps_margine_tot": bps_margine_tot or 0,
+        })
+    with st.spinner("Analisi AI in corso…"):
+        prompt_ai = costruisci_prompt_ai(STRATEGIA, ai_params, dati)
+        testo_ai  = chiama_claude(prompt_ai)
+    if testo_ai.startswith("ERRORE"):
+        st.sidebar.error(testo_ai)
+    else:
+        pdf_ai = genera_pdf_ai(testo_ai, nome, tk, STRATEGIA)
+        if pdf_ai:
+            ticker_clean = tk.replace("^", "").upper()
+            fname_ai = f"phinance_ai_{ticker_clean}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            st.sidebar.download_button(
+                label="⬇️ Scarica Report AI",
+                data=pdf_ai,
+                file_name=fname_ai,
+                mime="application/pdf",
+                use_container_width=True,
+            )
+            st.sidebar.success("Report AI pronto! Clicca per scaricare.")
 
 # ═══════════════════════════════════════════════════════════
 # RENDER UI
