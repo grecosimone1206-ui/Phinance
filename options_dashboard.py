@@ -2668,6 +2668,8 @@ if STRATEGIA == "put_scoperta":
     st.markdown("<div style='margin-top:2rem'></div>", unsafe_allow_html=True)
 
     # ── GRAFICO TRADINGVIEW ──
+    _tv_map = {"^GSPC": "SP:SPX", "^DJI": "DJ:DJI", "^NDX": "NASDAQ:NDX"}
+    tk_tv = _tv_map.get(tk, tk)
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Grafico</span>", unsafe_allow_html=True)
     st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
     st.components.v1.html(f"""
@@ -2679,7 +2681,7 @@ if STRATEGIA == "put_scoperta":
       new TradingView.widget({{
         "width": "100%",
         "height": 420,
-        "symbol": "{tk}",
+        "symbol": "{tk_tv}",
         "interval": "D",
         "timezone": "Europe/Rome",
         "theme": "dark",
@@ -2829,6 +2831,8 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
 
 
     # ── GRAFICO TRADINGVIEW ──
+    _tv_map = {"^GSPC": "SP:SPX", "^DJI": "DJ:DJI", "^NDX": "NASDAQ:NDX"}
+    tk_tv = _tv_map.get(tk, tk)
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Grafico</span>", unsafe_allow_html=True)
     st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
     st.components.v1.html(f"""
@@ -2840,7 +2844,7 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
       new TradingView.widget({{
         "width": "100%",
         "height": 420,
-        "symbol": "{tk}",
+        "symbol": "{tk_tv}",
         "interval": "D",
         "timezone": "Europe/Rome",
         "theme": "dark",
