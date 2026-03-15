@@ -2667,6 +2667,39 @@ if STRATEGIA == "put_scoperta":
         st.markdown(f'<div style="{_s}"><div style="{_e}">Rendimento</div><div style="{_v};font-size:1.2rem;color:var(--accent-green)">{fmt(rend,2)}% / mese</div><div style="{_b}">{fmt(rend_ann,2)}% / anno</div></div>', unsafe_allow_html=True)
     st.markdown("<div style='margin-top:2rem'></div>", unsafe_allow_html=True)
 
+    # ── GRAFICO TRADINGVIEW ──
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Grafico</span>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
+    st.components.v1.html(f"""
+    <div style="border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)">
+    <div class="tradingview-widget-container" style="height:420px">
+      <div id="tradingview_ps" style="height:100%"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget({{
+        "width": "100%",
+        "height": 420,
+        "symbol": "{tk}",
+        "interval": "D",
+        "timezone": "Europe/Rome",
+        "theme": "dark",
+        "style": "1",
+        "locale": "it",
+        "toolbar_bg": "#080C10",
+        "enable_publishing": false,
+        "hide_top_toolbar": false,
+        "hide_legend": false,
+        "save_image": false,
+        "container_id": "tradingview_ps",
+        "backgroundColor": "#080C10",
+        "gridColor": "rgba(255,255,255,0.03)",
+      }});
+      </script>
+    </div>
+    </div>
+    """, height=430)
+    st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
+
     # ── RIEPILOGO PUT SCOPERTA ──
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Riepilogo Operazione</span>", unsafe_allow_html=True)
     st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
@@ -2794,6 +2827,39 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
         st.markdown(f"""<div style="{_sa}"><div style="{_e}" class="greek-tooltip">Rendimento<span class="tip-icon">?</span><div class="tip-box">Rendimento percentuale sul margine bloccato se il trade va a profitto intero. Calcolato come credito totale diviso margine totale. Non include il costo del capitale nel tempo.</div></div><div style="{_v};font-size:1.2rem;color:var(--accent-green)">{fmt(bps_rend,1)}%</div><div style="{_b}">sul margine / mese</div></div>""", unsafe_allow_html=True)
     st.markdown("<div style='margin-top:2rem'></div>", unsafe_allow_html=True)
 
+
+    # ── GRAFICO TRADINGVIEW ──
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Grafico</span>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
+    st.components.v1.html(f"""
+    <div style="border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)">
+    <div class="tradingview-widget-container" style="height:420px">
+      <div id="tradingview_bps" style="height:100%"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget({{
+        "width": "100%",
+        "height": 420,
+        "symbol": "{tk}",
+        "interval": "D",
+        "timezone": "Europe/Rome",
+        "theme": "dark",
+        "style": "1",
+        "locale": "it",
+        "toolbar_bg": "#080C10",
+        "enable_publishing": false,
+        "hide_top_toolbar": false,
+        "hide_legend": false,
+        "save_image": false,
+        "container_id": "tradingview_bps",
+        "backgroundColor": "#080C10",
+        "gridColor": "rgba(255,255,255,0.03)",
+      }});
+      </script>
+    </div>
+    </div>
+    """, height=430)
+    st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
     # ── RIEPILOGO BPS ──
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Riepilogo Operazione</span>", unsafe_allow_html=True)
