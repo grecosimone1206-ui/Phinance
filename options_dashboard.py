@@ -1220,36 +1220,37 @@ hr { border-color: var(--border-subtle) !important; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
 </style>
+""", unsafe_allow_html=True)
+
+# ── Forza punto decimale negli input sidebar ──
+import streamlit.components.v1 as _components
+_components.html("""
 <script>
-// Forza il punto come separatore decimale in tutti gli input numerici della sidebar
 (function() {
-    function fixDecimalSeparator() {
-        const sidebar = document.querySelector('[data-testid="stSidebar"]');
+    function fixDecimal() {
+        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
         if (!sidebar) return;
-        const inputs = sidebar.querySelectorAll('input[type="number"], input[aria-label]');
-        inputs.forEach(function(inp) {
-            if (!inp._decimalFixed) {
-                inp._decimalFixed = true;
-                inp.addEventListener('blur', function() {
-                    this.value = this.value.replace(/,/g, '.');
-                });
-                inp.addEventListener('input', function() {
+        sidebar.querySelectorAll('input').forEach(function(inp) {
+            if (inp._phinanceFixed) return;
+            inp._phinanceFixed = true;
+            inp.addEventListener('keypress', function(e) {
+                if (e.key === ',') { e.preventDefault(); document.execCommand('insertText', false, '.'); }
+            });
+            inp.addEventListener('input', function() {
+                if (this.value.includes(',')) {
                     const pos = this.selectionStart;
-                    if (this.value.includes(',')) {
-                        this.value = this.value.replace(/,/g, '.');
-                        try { this.setSelectionRange(pos, pos); } catch(e) {}
-                    }
-                });
-            }
+                    this.value = this.value.replace(/,/g, '.');
+                    try { this.setSelectionRange(pos, pos); } catch(e) {}
+                }
+            });
         });
     }
-    // Esegui al caricamento e ogni volta che il DOM cambia
-    const observer = new MutationObserver(fixDecimalSeparator);
-    observer.observe(document.body, { childList: true, subtree: true });
-    fixDecimalSeparator();
+    const mo = new MutationObserver(fixDecimal);
+    mo.observe(window.parent.document.body, { childList: true, subtree: true });
+    setInterval(fixDecimal, 500);
 })();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
 
 # ═══════════════════════════════════════════════════════════
