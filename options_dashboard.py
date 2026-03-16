@@ -26,10 +26,9 @@ try:
     from reportlab.lib import colors
     from reportlab.lib.units import cm
     from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+    from reportlab.lib.enums import TA_LEFT
     from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
                                      Table, TableStyle, HRFlowable, PageBreak)
-    from reportlab.pdfgen import canvas as rl_canvas
     REPORTLAB_OK = True
 except ImportError:
     import subprocess, sys
@@ -39,10 +38,9 @@ except ImportError:
         from reportlab.lib import colors
         from reportlab.lib.units import cm
         from reportlab.lib.styles import ParagraphStyle
-        from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+        from reportlab.lib.enums import TA_LEFT
         from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
                                          Table, TableStyle, HRFlowable, PageBreak)
-        from reportlab.pdfgen import canvas as rl_canvas
         REPORTLAB_OK = True
     except ImportError:
         REPORTLAB_OK = False
@@ -1800,7 +1798,6 @@ def genera_pdf_scenari(strategia, params):
     BG      = colors.HexColor("#080C10")
     CYAN    = colors.HexColor("#00C2FF")
     GREEN   = colors.HexColor("#00E5A0")
-    GOLD    = colors.HexColor("#FFB547")
     RED     = colors.HexColor("#FF5A5A")
     MUTED   = colors.HexColor("#8B9FC0")
     SURFACE = colors.HexColor("#0F1E2E")
@@ -2316,7 +2313,6 @@ with st.sidebar:
     if STRATEGIA == "put_scoperta":
         st.markdown("<div class='sb-section'>Dati Reali dal Broker</div>", unsafe_allow_html=True)
 
-    iv_ind_reale = None  # IV IND gestita direttamente dallo slider sopra
 
     # ── Greche reali — solo put scoperta ──
     if STRATEGIA == "put_scoperta":
@@ -2461,7 +2457,6 @@ iv_ind  = iv_pct  # IV IND: direttamente dallo slider omonimo
 vix_val = dati["vix"]
 var     = dati["variazione_gg"]
 nome    = dati["nome"]
-agg     = dati["ultimo_agg"]
 ts_spot = dati["ts_spot"]
 ts_vol  = dati["ts_vol"]
 ts_vix  = dati["ts_vix"]
@@ -2484,7 +2479,6 @@ K     = strike_target(spot, sigma, T, r, prob_t/100.0)
 par   = Par(S=spot, K=K, T=T, r=r, sigma=sigma)
 prem_bs = prezzo_put(par)
 prem     = premio_reale if premio_reale is not None else prem_bs
-prem_fonte = "Reale (broker)" if premio_reale is not None else "Black-Scholes (stimato)"
 prob  = prob_ok(par)
 gre   = calc_greche(par)
 sema  = calc_semaforo(iv_pct, vol_st, iv_rank, vix_val)
@@ -2498,7 +2492,6 @@ rend      = (ptot / marg_tot * 100) if marg_tot > 0 else 0    # rendimento sul m
 dist      = (spot - K) / spot * 100
 sc        = calc_wcs(spot, K, prem, n_contratti, crash)
 # sz dict compatibilità (usato nel pannello e nel riepilogo)
-sz        = {"n": n_contratti, "mc": mc, "imp": marg_tot, "lib": 0}
 
 # ── CALCOLI BULL PUT SPREAD ──
 if STRATEGIA == "bull_put_spread" and larghezza_spread and credito_reale_bps:
@@ -2508,8 +2501,6 @@ if STRATEGIA == "bull_put_spread" and larghezza_spread and credito_reale_bps:
     bps_credito_tot = round(bps_credito * 100 * n_contratti, 2)      # credito totale
     bps_margine_c  = round((larghezza_spread - bps_credito) * 100, 2) # margine per contratto
     bps_margine_tot = round(bps_margine_c * n_contratti, 2)           # margine totale
-    bps_max_profit  = bps_credito_tot                                 # massimo profitto
-    bps_max_loss    = bps_margine_tot                                 # massima perdita
     bps_be          = bps_K_venduta - bps_credito                     # break-even
     bps_rend        = (bps_credito_tot / bps_margine_tot * 100) if bps_margine_tot > 0 else 0
     bps_rend_ann    = (((1 + bps_rend / 100) ** 12) - 1) * 100
@@ -2521,23 +2512,14 @@ if STRATEGIA == "bull_put_spread" and larghezza_spread and credito_reale_bps:
     # Deviazione standard a scadenza
     bps_sigma_T     = spot * sigma * np.sqrt(T)
     bps_dist_sd     = (spot - bps_K_venduta) / bps_sigma_T if bps_sigma_T > 0 else 0
-    # Semaforo regola credito ≥ 1/3 larghezza (Tastytrade)
-    if bps_pct_largh >= 33:
-        bps_regola_cls = "ok"; bps_regola_txt = "Credito ottimale (≥33% — regola 1/3 quantitativa)"
-    elif bps_pct_largh >= 25:
-        bps_regola_cls = "warn"; bps_regola_txt = "Credito accettabile (25–33%) — sotto la soglia ideale"
-    else:
-        bps_regola_cls = "bad"; bps_regola_txt = "Credito insufficiente (<25%) — valore atteso negativo"
 else:
     bps_K_venduta = bps_K_comprata = bps_credito = bps_credito_tot = None
     bps_margine_c = bps_margine_tot = bps_max_profit = bps_max_loss = None
     bps_be = bps_rend = bps_rend_ann = bps_pct_largh = bps_tp = bps_sl = None
     bps_dist_venduta = bps_dist_comprata = bps_dist_sd = bps_sigma_T = None
-    bps_regola_cls = bps_regola_txt = None
 
 # IV Rank badge
 ivr_cls   = "alto" if iv_rank >= 50 else "medio" if iv_rank >= 30 else "basso"
-ivr_label = "Alto &mdash; Vendi" if iv_rank >= 50 else "Medio &mdash; Valuta" if iv_rank >= 30 else "Basso &mdash; Aspetta"
 
 # VIX colore
 vix_str = fmt(vix_val, 2) if vix_val else "N/D"
@@ -2749,7 +2731,6 @@ st.markdown(f"""
 
 # variabili comuni
 pn       = sc["lt"]                                        # perdita netta totale (già al netto del premio)
-imp      = (abs(pn) / marg_tot * 100) if marg_tot > 0 else 0
 rend_ann = (((1 + rend / 100) ** 12) - 1) * 100           # rendimento annuo composto
 
 # ── SIGNAL BANNER ──
@@ -2974,7 +2955,6 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
     _v = "font-family:'DM Sans',sans-serif;font-weight:700;letter-spacing:-0.03em;white-space:nowrap;overflow:hidden;text-overflow:clip"
     _e = "font-family:'DM Mono',monospace;font-size:0.55rem;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#3E526A;margin-bottom:0.3rem;white-space:nowrap"
     _b = "font-family:'DM Mono',monospace;font-size:0.6rem;color:#3E526A;white-space:nowrap;overflow:hidden"
-    bps_thday = theta_reale if theta_reale is not None else abs(gre['theta']) * 100
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Dettaglio Posizione</span>", unsafe_allow_html=True)
     d1,d2,d3,d4,d5 = st.columns(5, gap="small")
     with d1:
