@@ -2645,13 +2645,13 @@ else:
 # IV IND: per vendita opzioni alto=verde, basso=rosso
 if iv_ind >= 30:
     iv_ind_cls   = "green"
-    iv_ind_label = "Alta &mdash; Vendi"
+    iv_ind_label = "&#9650; Alta &mdash; Vendi"
 elif iv_ind >= 20:
     iv_ind_cls   = "gold"
-    iv_ind_label = "Media &mdash; Valuta"
+    iv_ind_label = "&#8596; Media &mdash; Valuta"
 else:
     iv_ind_cls   = "red"
-    iv_ind_label = "Bassa &mdash; Aspetta"
+    iv_ind_label = "&#9660; Bassa &mdash; Aspetta"
 iv_ind_fonte = "Da slider IV IND"
 
 
