@@ -1623,7 +1623,7 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
         canv.drawString(1.5*cm, H - 1.05*cm, "Phinance")
         canv.setFont("Helvetica", 8)
         canv.setFillColor(WHITE)
-        canv.drawString(4.2*cm, H - 1.05*cm, f"| Analisi AI — {strat_label} — {nome} ({ticker})")
+        canv.drawString(4.2*cm, H - 1.05*cm, f"| Analisi AI — {strat_label} — {nome}")
         canv.setFillColor(MUTED)
         canv.drawRightString(W - 1.5*cm, H - 1.05*cm, data_oggi)
         canv.setStrokeColor(BORDER)
@@ -1666,7 +1666,7 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
     story = []
     story.append(Spacer(1, 0.5*cm))
     story.append(Paragraph("Analisi AI della Posizione", s_title))
-    story.append(Paragraph(f"{nome} ({ticker})  ·  {strat_label}  ·  {data_oggi}", s_sub))
+    story.append(Paragraph(f"{nome}  ·  {strat_label}  ·  {data_oggi}", s_sub))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
     story.append(Spacer(1, 0.3*cm))
 
@@ -1689,6 +1689,7 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
         return False
 
     sezioni = _re.split(r'─{10,}', testo)
+    trovata_prima_sezione = False
     for blocco in sezioni:
         blocco = blocco.strip()
         if not blocco:
@@ -1699,13 +1700,19 @@ def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes |
 
         prima = pulisci(righe[0])
         if is_titolo_sezione(prima):
+            trovata_prima_sezione = True
             story.append(Spacer(1, 0.2*cm))
             story.append(Paragraph(prima.upper(), s_section))
             story.append(HRFlowable(width="100%", thickness=0.3, color=BORDER))
             story.append(Spacer(1, 0.1*cm))
             corpo = righe[1:]
         else:
-            corpo = righe
+            # Prima della sezione 1: mostra il testo ma salta righe che sono titoli ridondanti
+            # (es. "REPORT PROFESSIONALE - ...")
+            corpo = [_re.sub(r'\bPROFESSIONALE\b\s*[-–]?\s*', '', pulisci(r), flags=_re.IGNORECASE).strip()
+                     if _re.search(r'\bPROFESSIONALE\b', r, _re.IGNORECASE) else r
+                     for r in righe]
+            corpo = [r for r in corpo if r.strip()]
 
         for riga in corpo:
             riga = pulisci(riga)
