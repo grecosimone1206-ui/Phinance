@@ -2149,7 +2149,7 @@ with st.sidebar:
             on_change=lambda: st.session_state.update({"input_dte": st.session_state["slider_dte"]}),
             help="Giorni calendariali alla scadenza. Ottimale: 35-49 giorni.")
     with col_n:
-        st.number_input("dte_n", 1, 365, key="input_dte", format="%.0f",
+        st.number_input("dte_n", 1, 365, key="input_dte", format="%d",
             label_visibility="collapsed",
             on_change=lambda: st.session_state.update({"slider_dte": int(st.session_state["input_dte"])}))
     dte = int(st.session_state["slider_dte"])
@@ -2204,7 +2204,7 @@ with st.sidebar:
             on_change=lambda: st.session_state.update({"input_nc": st.session_state["slider_nc"]}),
             help="Quanti contratti vuoi vendere. Ogni contratto copre 100 azioni.")
     with col_n:
-        st.number_input("nc_n", 1, 50, key="input_nc", format="%.0f",
+        st.number_input("nc_n", 1, 50, key="input_nc", format="%d",
             label_visibility="collapsed",
             on_change=lambda: st.session_state.update({"slider_nc": int(st.session_state["input_nc"])}))
     n_contratti = int(st.session_state["slider_nc"])
@@ -2292,7 +2292,7 @@ with st.sidebar:
                 on_change=lambda: st.session_state.update({"input_ls": st.session_state["slider_ls"]}),
                 help="Differenza in dollari tra lo strike venduto e quello comprato.")
         with col_ls_n:
-            st.number_input("ls_n", 1, 100, key="input_ls", format="%.0f",
+            st.number_input("ls_n", 1, 100, key="input_ls", format="%d",
                 label_visibility="collapsed",
                 on_change=lambda: st.session_state.update({"slider_ls": int(st.session_state["input_ls"])}))
         larghezza_spread = int(st.session_state["slider_ls"])
