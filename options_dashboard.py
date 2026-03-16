@@ -2384,7 +2384,7 @@ with st.sidebar:
     genera_pdf_btn = st.button("Genera Report Scenari",
         use_container_width=True,
         help=f"Genera un PDF scaricabile con l'analisi completa della posizione su una fascia -10%/+10% dallo spot, "
-             f"30 livelli di prezzo con valore delle opzioni e P&L calcolato con Black-Scholes a T residuo = {max(int(st.session_state.get('slider_dte', 45) / 2), 1)} giorni (DTE/2).")
+             f"30 livelli di prezzo con valore delle opzioni e P&L calcolato con T residuo = {max(int(st.session_state.get('slider_dte', 45) / 2), 1)} giorni.")
     if "pdf_scenari_bytes" in st.session_state and st.session_state["pdf_scenari_bytes"]:
         st.download_button(
             label="Scarica Report Scenari",
