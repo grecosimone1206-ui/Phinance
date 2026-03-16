@@ -1322,9 +1322,10 @@ def recupera_dati_mercato(ticker: str) -> dict:
         ts_spot = ts
         ts_vol  = ts
 
-        # ── VIX automatico ──
+        # ── VIX automatico (VXN per QQQ, VIX per tutti gli altri) ──
         try:
-            vix_ticker = yf.Ticker("^VIX")
+            vix_symbol = "^VXN" if ticker.upper() in ("QQQ", "^NDX") else "^VIX"
+            vix_ticker = yf.Ticker(vix_symbol)
             vix_h      = vix_ticker.history(period="5d")
             vix_val    = round(float(vix_h["Close"].iloc[-1]), 2) if not vix_h.empty else None
             ts_vix     = ts
@@ -1344,6 +1345,7 @@ def recupera_dati_mercato(ticker: str) -> dict:
             "vol_storica":  round(vol_30, 2),
             "iv_rank":      iv_rank,
             "vix":          vix_val,
+            "vix_symbol":   vix_symbol if 'vix_symbol' in dir() else "^VIX",
             "nome":         nome,
             "ultimo_agg":   h.index[-1].strftime("%d/%m/%Y"),
             "ts_spot":      ts_spot,
@@ -2454,7 +2456,14 @@ spot    = dati["prezzo_spot"]
 vol_st  = dati["vol_storica"]
 iv_rank = iv_rank_reale  # sempre valorizzato dallo slider IV Rank
 iv_ind  = iv_pct  # IV IND: direttamente dallo slider omonimo
-vix_val = dati["vix"]
+vix_val    = dati["vix"]
+vix_symbol = dati.get("vix_symbol", "^VIX")
+vix_label  = "VXN — Paura Nasdaq" if vix_symbol == "^VXN" else "VIX — Paura"
+vix_tooltip = ("Il VXN misura la volatilità implicita attesa sul Nasdaq 100 nei prossimi 30 giorni. "
+               "Sotto 20 = mercato tranquillo, premi bassi. 20-25 = normale. Sopra 25 = paura elevata, premi gonfiati — ottimo per vendere opzioni."
+               if vix_symbol == "^VXN" else
+               "Il VIX misura la volatilità implicita attesa sull'S&P 500 nei prossimi 30 giorni. "
+               "Sotto 15 = mercato tranquillo, premi bassi. 15-20 = normale. Sopra 20 = paura elevata, premi gonfiati — ottimo per vendere put.")
 var     = dati["variazione_gg"]
 nome    = dati["nome"]
 ts_spot = dati["ts_spot"]
@@ -2523,7 +2532,10 @@ ivr_cls   = "alto" if iv_rank >= 50 else "medio" if iv_rank >= 30 else "basso"
 
 # VIX colore
 vix_str = fmt(vix_val, 2) if vix_val else "N/D"
-vix_cls = "green" if vix_val and vix_val >= 20 else "gold" if vix_val and vix_val >= 15 else "red"
+# Soglie: VXN storicamente più alto del VIX (soglie +5 punti)
+_vix_high = 25 if vix_symbol == "^VXN" else 20
+_vix_mid  = 20 if vix_symbol == "^VXN" else 15
+vix_cls = "green" if vix_val and vix_val >= _vix_high else "gold" if vix_val and vix_val >= _vix_mid else "red"
 
 
 # ═══════════════════════════════════════════════════════════
@@ -2647,10 +2659,10 @@ else:
     ivr_cls   = "red"
 
 # VIX: alto=verde, medio=arancio, basso=rosso
-if vix_val and vix_val >= 20:
+if vix_val and vix_val >= _vix_high:
     vix_arrow = "&#9650; Elevato &mdash; Vendi"
     vix_cls   = "green"
-elif vix_val and vix_val >= 15:
+elif vix_val and vix_val >= _vix_mid:
     vix_arrow = "&#8596; Normale &mdash; Nella norma"
     vix_cls   = "gold"
 elif vix_val:
@@ -2707,9 +2719,9 @@ st.markdown(f"""
   </div>
 
   <div class="kpi-card kpi-sm" style="animation-delay:0.18s">
-    <div class="kpi-eyebrow greek-tooltip">&#9679; VIX &mdash; Paura
+    <div class="kpi-eyebrow greek-tooltip">&#9679; {vix_label}
         <span class="tip-icon">?</span>
-        <div class="tip-box">Il VIX misura la volatilità implicita attesa sull&apos;S&amp;P 500 nei prossimi 30 giorni. Sotto 15 = mercato tranquillo, premi bassi. 15-20 = normale. Sopra 20 = paura elevata, premi gonfiati &mdash; ottimo per vendere put.</div>
+        <div class="tip-box">{vix_tooltip}</div>
     </div>
     <div class="kpi-value {vix_cls}">{vix_str}</div>
     <div class="kpi-sub">Aggiornato<br>{ts_vix}</div>
