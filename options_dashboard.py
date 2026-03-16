@@ -2388,10 +2388,39 @@ with st.sidebar:
         )
 
     st.markdown("<div class='sb-section'>Analisi AI</div>", unsafe_allow_html=True)
-    genera_ai_btn = st.button("Genera Report AI",
-        use_container_width=True,
-        help="Invia i parametri della posizione a Claude per un'analisi professionale del sottostante, "
-             "della volatilità e della solidità del trade.")
+
+    # ── Password AI ──
+    import os as _os
+    AI_PWD = _os.environ.get("AI_PASSWORD", "")
+    if "ai_sbloccato" not in st.session_state:
+        st.session_state["ai_sbloccato"] = False
+
+    if not st.session_state["ai_sbloccato"]:
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PASSWORD</span>", unsafe_allow_html=True)
+        pwd_input = st.text_input("pwd", type="password",
+            label_visibility="collapsed",
+            placeholder="Inserisci password…",
+            key="ai_pwd_input")
+        if pwd_input:
+            if pwd_input == AI_PWD:
+                st.session_state["ai_sbloccato"] = True
+                st.rerun()
+            else:
+                st.error("Password errata.")
+        genera_ai_btn = st.button("🔒 Genera Report AI",
+            use_container_width=True, disabled=True)
+    else:
+        col_ai, col_lock = st.columns([4, 1])
+        with col_lock:
+            if st.button("🔓", help="Blocca Report AI", use_container_width=True):
+                st.session_state["ai_sbloccato"] = False
+                st.session_state["ai_pwd_input"] = ""
+                st.rerun()
+        genera_ai_btn = st.button("Genera Report AI",
+            use_container_width=True,
+            help="Invia i parametri della posizione a Claude per un'analisi professionale del sottostante, "
+                 "della volatilità e della solidità del trade.")
+
     if "pdf_ai_bytes" in st.session_state and st.session_state["pdf_ai_bytes"]:
         st.download_button(
             label="Scarica Report AI",
