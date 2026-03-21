@@ -3025,7 +3025,6 @@ updateChart(TOTAL_DTE);
 </body>
 </html>
 """, height=530)
-    st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
     # ── GRAFICO TRADINGVIEW ──
     _tv_map = {"^GSPC": "SP:SPX", "^DJI": "DJ:DJI", "^NDX": "NASDAQ:NDX"}
@@ -3367,7 +3366,6 @@ updateChart(TOTAL_DTE,IV);
 </body>
 </html>
 """, height=620)
-    st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
     # ── GRAFICO TRADINGVIEW ──
     _tv_map = {"^GSPC": "SP:SPX", "^DJI": "DJ:DJI", "^NDX": "NASDAQ:NDX"}
