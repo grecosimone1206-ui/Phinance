@@ -3244,7 +3244,6 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
   <div class="card">
     <div class="card-label">Credito / larghezza</div>
     <div class="card-val green">+${_bps_credit}</div>
-    <span class="badge {'badge-green' if _bps_pct_w >= 33 else 'badge-gold' if _bps_pct_w >= 25 else 'badge-red'}">{_bps_pct_w}%</span>
   </div>
 </div>
 
@@ -3260,11 +3259,6 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
     <span class="ctrl-label">DTE SIMULATI</span>
     <input type="range" id="dteSlider" min="0" max="{_bps_dte}" value="{_bps_dte}" step="1">
     <div class="ctrl-val"><span id="dteVal">{_bps_dte}</span> <span style="font-size:11px;color:#8B9FC0;">gg</span></div>
-  </div>
-  <div class="ctrl-row">
-    <span class="ctrl-label">IV SIMULATA</span>
-    <input type="range" id="ivSlider" min="10" max="60" value="{_bps_iv}" step="0.5">
-    <div class="ctrl-val"><span id="ivVal">{_bps_iv}</span><span style="font-size:11px;color:#8B9FC0;">%</span></div>
   </div>
 </div>
 
@@ -3367,17 +3361,12 @@ document.getElementById('dteSlider').addEventListener('input',function(){{
   document.getElementById('dteVal').textContent=curDte;
   updateChart(curDte,IV);
 }});
-document.getElementById('ivSlider').addEventListener('input',function(){{
-  IV=parseFloat(this.value)/100;
-  document.getElementById('ivVal').textContent=this.value;
-  updateChart(curDte,IV);
-}});
 
 updateChart(TOTAL_DTE,IV);
 </script>
 </body>
 </html>
-""", height=640)
+""", height=580)
     st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
     # ── GRAFICO TRADINGVIEW ──
