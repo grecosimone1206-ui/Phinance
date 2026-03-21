@@ -2847,12 +2847,13 @@ if STRATEGIA == "put_scoperta":
 
     _ps_spot   = round(spot, 2)
     _ps_strike = round(K, 2)
-    _ps_prem   = round(prem, 4)
+    _ps_prem   = round(prem, 2)
     _ps_iv     = round(sigma * 100, 1)
     _ps_dte    = int(dte)
     _ps_maxp   = round(_ps_prem * 100, 2)
     _ps_be     = round(_ps_strike - _ps_prem, 2)
     _ps_dist   = round((_ps_spot - _ps_be) / _ps_spot * 100, 2)
+    _ps_margine = round(marg_tot, 2)  # perdita massima = margine bloccato
 
     st.components.v1.html(f"""
 <!DOCTYPE html>
@@ -2881,7 +2882,7 @@ if STRATEGIA == "put_scoperta":
 
 <div class="grid4">
   <div class="card"><div class="card-label">Strike</div><div class="card-val cyan">${_ps_strike}</div></div>
-  <div class="card"><div class="card-label">Premio / az.</div><div class="card-val green">+${_ps_prem}</div></div>
+  <div class="card"><div class="card-label">Premio / az.</div><div class="card-val green">+${_ps_prem:.2f}</div></div>
   <div class="card"><div class="card-label">Break-even</div><div class="card-val gold">${_ps_be}</div></div>
   <div class="card"><div class="card-label">Distanza BE</div><div class="card-val">{_ps_dist}%</div></div>
 </div>
@@ -2912,6 +2913,7 @@ const IV = {_ps_iv / 100};
 const TOTAL_DTE = {_ps_dte};
 const R = 0.04;
 const MAX_LOSS_FACTOR = 0.40;
+const MARGINE = {_ps_margine};  // perdita massima = margine bloccato
 
 function norm(x) {{
   const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
@@ -2929,12 +2931,15 @@ function bsPut(S,K,T,r,sigma) {{
 function psPnlCurrent(price, dte) {{
   const T=Math.max(dte,0.1)/365;
   const putVal=bsPut(price,STRIKE,T,R,IV);
-  return Math.round((PREM-putVal)*100*100)/100;
+  const raw = Math.round((PREM-putVal)*100*100)/100;
+  return Math.max(raw, -MARGINE);
 }}
 
 function psPnlAtExp(price) {{
-  if(price>=STRIKE) return Math.round(PREM*100*100)/100;
-  return Math.round((PREM-(STRIKE-price))*100*100)/100;
+  let raw;
+  if(price>=STRIKE) raw = Math.round(PREM*100*100)/100;
+  else raw = Math.round((PREM-(STRIKE-price))*100*100)/100;
+  return Math.max(raw, -MARGINE);
 }}
 
 const priceMin = Math.round(STRIKE*(1-MAX_LOSS_FACTOR));
@@ -2970,7 +2975,12 @@ const chart=new Chart(document.getElementById('psChart'),{{
     }},
     scales:{{
       x:{{ticks:{{autoSkip:true,maxTicksLimit:10,color:'#4A6080',font:{{size:10}}}},grid:{{color:'rgba(255,255,255,0.04)'}}}},
-      y:{{ticks:{{color:'#4A6080',font:{{size:10}},callback:v=>(v>=0?'+':'')+'€'+v}},grid:{{color:'rgba(255,255,255,0.04)'}}}}
+      y:{{
+        min: -MARGINE,
+        max: Math.round(PREM * 100 * 2.5),
+        ticks:{{color:'#4A6080',font:{{size:10}},callback:v=>(v>=0?'+':'')+'€'+v}},
+        grid:{{color:'rgba(255,255,255,0.04)'}}
+      }}
     }}
   }}
 }});
