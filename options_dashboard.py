@@ -3366,7 +3366,7 @@ updateChart(TOTAL_DTE,IV);
 </script>
 </body>
 </html>
-""", height=580)
+""", height=620)
     st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
     # ── GRAFICO TRADINGVIEW ──
