@@ -2876,6 +2876,182 @@ if STRATEGIA == "put_scoperta":
     """, height=430)
     st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
+    # ── GRAFICO P&L INTERATTIVO PUT SCOPERTA ──
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Simulatore P&amp;L</span>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
+
+    _ps_spot   = round(spot, 2)
+    _ps_strike = round(K, 2)
+    _ps_prem   = round(prem, 4)
+    _ps_iv     = round(sigma * 100, 1)
+    _ps_dte    = int(dte)
+    _ps_maxp   = round(_ps_prem * 100, 2)
+    _ps_be     = round(_ps_strike - _ps_prem, 2)
+    _ps_dist   = round((_ps_spot - _ps_be) / _ps_spot * 100, 2)
+
+    st.components.v1.html(f"""
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'DM Sans', system-ui, sans-serif; }}
+  body {{ background: transparent; color: #E2E8F0; }}
+  .grid2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }}
+  .grid4 {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }}
+  .card {{ background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px; }}
+  .card-label {{ font-size: 11px; color: #8B9FC0; margin-bottom: 3px; letter-spacing: 0.05em; }}
+  .card-val {{ font-size: 18px; font-weight: 600; }}
+  .green {{ color: #00E5A0; }} .red {{ color: #FF5A5A; }} .cyan {{ color: #00C2FF; }} .gold {{ color: #FFB547; }}
+  .slider-row {{ background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 14px; }}
+  .slider-row label {{ font-size: 11px; color: #8B9FC0; white-space: nowrap; letter-spacing: 0.08em; }}
+  .slider-row input[type=range] {{ flex: 1; accent-color: #00C2FF; height: 4px; }}
+  .slider-val {{ font-size: 20px; font-weight: 600; color: #00C2FF; min-width: 60px; text-align: right; }}
+  .status-grid {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 10px; }}
+  .legend {{ display: flex; gap: 16px; margin-bottom: 8px; font-size: 11px; color: #8B9FC0; align-items: center; }}
+  .leg-dot {{ width: 12px; height: 3px; display: inline-block; border-radius: 2px; }}
+</style>
+</head>
+<body>
+
+<div class="grid4">
+  <div class="card"><div class="card-label">Strike</div><div class="card-val cyan">${_ps_strike}</div></div>
+  <div class="card"><div class="card-label">Premio / az.</div><div class="card-val green">+${_ps_prem}</div></div>
+  <div class="card"><div class="card-label">Break-even</div><div class="card-val gold">${_ps_be}</div></div>
+  <div class="card"><div class="card-label">Distanza BE</div><div class="card-val">{_ps_dist}%</div></div>
+</div>
+
+<div class="slider-row">
+  <label>DTE SIMULATI</label>
+  <input type="range" id="dteSlider" min="0" max="{_ps_dte}" value="{_ps_dte}" step="1">
+  <div class="slider-val"><span id="dteVal">{_ps_dte}</span> <span style="font-size:12px;color:#8B9FC0;">gg</span></div>
+</div>
+
+<div class="legend">
+  <span><span class="leg-dot" style="background:#00C2FF;"></span> Valore attuale</span>
+  <span><span class="leg-dot" style="background:#8B9FC0;border-top:2px dashed #8B9FC0;"></span> A scadenza</span>
+  <span><span class="leg-dot" style="background:#FF5A5A;width:2px;height:12px;"></span> Spot ({_ps_spot})</span>
+</div>
+
+<div style="position:relative;width:100%;height:300px;">
+  <canvas id="psChart"></canvas>
+</div>
+
+<div class="status-grid" id="statusBar"></div>
+
+<script>
+const SPOT = {_ps_spot};
+const STRIKE = {_ps_strike};
+const PREM = {_ps_prem};
+const IV = {_ps_iv / 100};
+const TOTAL_DTE = {_ps_dte};
+const R = 0.04;
+const MAX_LOSS_FACTOR = 0.40;
+
+function norm(x) {{
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const sign=x<0?-1:1, t=1/(1+p*Math.abs(x));
+  return 0.5*(1+sign*(1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x/2)));
+}}
+
+function bsPut(S,K,T,r,sigma) {{
+  if(T<=0.0001) return Math.max(K-S,0);
+  const d1=(Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
+  const d2=d1-sigma*Math.sqrt(T);
+  return K*Math.exp(-r*T)*norm(-d2)-S*norm(-d1);
+}}
+
+function psPnlCurrent(price, dte) {{
+  const T=Math.max(dte,0.1)/365;
+  const putVal=bsPut(price,STRIKE,T,R,IV);
+  return Math.round((PREM-putVal)*100*100)/100;
+}}
+
+function psPnlAtExp(price) {{
+  if(price>=STRIKE) return Math.round(PREM*100*100)/100;
+  return Math.round((PREM-(STRIKE-price))*100*100)/100;
+}}
+
+const priceMin = Math.round(STRIKE*(1-MAX_LOSS_FACTOR));
+const priceMax = Math.round(SPOT*1.12);
+const prices=[];
+for(let p=priceMin;p<=priceMax;p+=Math.round((priceMax-priceMin)/60)) prices.push(p);
+
+const spotIdx=prices.findIndex(p=>p>=SPOT);
+
+const chart=new Chart(document.getElementById('psChart'),{{
+  type:'line',
+  data:{{
+    labels:prices.map(p=>'$'+p),
+    datasets:[
+      {{label:'Valore attuale',data:[],borderColor:'#00C2FF',backgroundColor:'rgba(0,194,255,0.07)',fill:true,pointRadius:0,borderWidth:2.5,tension:0.3}},
+      {{label:'A scadenza',data:[],borderColor:'#8B9FC0',backgroundColor:'transparent',fill:false,pointRadius:0,borderWidth:1.5,tension:0,borderDash:[6,4]}}
+    ]
+  }},
+  options:{{
+    responsive:true,maintainAspectRatio:false,
+    interaction:{{mode:'index',intersect:false}},
+    plugins:{{
+      legend:{{display:false}},
+      tooltip:{{
+        backgroundColor:'#0D1520',borderColor:'rgba(0,194,255,0.3)',borderWidth:1,
+        titleColor:'#E2E8F0',bodyColor:'#8B9FC0',
+        callbacks:{{
+          title:ctx=>'SPY a '+ctx[0].label,
+          label:ctx=>{{const v=ctx.dataset.data[ctx.dataIndex];if(v===null||v===undefined)return null;return ctx.dataset.label+': '+(v>=0?'+':'')+'€'+v;}}
+        }}
+      }},
+      annotation:{{}}
+    }},
+    scales:{{
+      x:{{ticks:{{autoSkip:true,maxTicksLimit:10,color:'#4A6080',font:{{size:10}}}},grid:{{color:'rgba(255,255,255,0.04)'}}}},
+      y:{{ticks:{{color:'#4A6080',font:{{size:10}},callback:v=>(v>=0?'+':'')+'€'+v}},grid:{{color:'rgba(255,255,255,0.04)'}}}}
+    }}
+  }}
+}});
+
+function addSpotAnnotation() {{
+  if(spotIdx>=0) {{
+    const meta=chart.getDatasetMeta(0);
+    chart.options.plugins.annotation={{
+      annotations:{{
+        spotLine:{{
+          type:'line',scaleID:'x',value:prices[spotIdx],borderColor:'rgba(255,90,90,0.7)',borderWidth:1.5,
+          label:{{display:true,content:'Spot',backgroundColor:'rgba(255,90,90,0.2)',color:'#FF5A5A',font:{{size:10}}}}
+        }}
+      }}
+    }};
+  }}
+}}
+
+function updateChart(dte) {{
+  chart.data.datasets[0].data=prices.map(p=>psPnlCurrent(p,dte));
+  chart.data.datasets[1].data=prices.map(p=>psPnlAtExp(p));
+  chart.update('none');
+  const spotPnl=psPnlCurrent(SPOT,dte);
+  const tp50=Math.round(PREM*100*0.5*100)/100;
+  const sl2x=Math.round(PREM*100*2*100)/100;
+  const pctD=Math.round((1-dte/TOTAL_DTE)*100);
+  document.getElementById('statusBar').innerHTML=`
+    <div class="card"><div class="card-label">P&L allo spot</div><div class="card-val ${{spotPnl>=0?'green':'red'}}">${{spotPnl>=0?'+':''}}€${{spotPnl}}</div></div>
+    <div class="card"><div class="card-label">Theta decayato</div><div class="card-val">${{pctD}}%</div></div>
+    <div class="card"><div class="card-label">Take profit 50%</div><div class="card-val green">+€${{tp50}}</div></div>
+    <div class="card"><div class="card-label">Stop loss 2x</div><div class="card-val red">-€${{sl2x}}</div></div>
+  `;
+}}
+
+document.getElementById('dteSlider').addEventListener('input',function(){{
+  document.getElementById('dteVal').textContent=this.value;
+  updateChart(parseInt(this.value));
+}});
+
+updateChart(TOTAL_DTE);
+</script>
+</body>
+</html>
+""", height=530)
+    st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
+
     # ── RIEPILOGO PUT SCOPERTA ──
     st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Riepilogo Operazione</span>", unsafe_allow_html=True)
     st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
@@ -3036,6 +3212,197 @@ elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
     </div>
     </div>
     """, height=430)
+    st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
+
+    # ── GRAFICO P&L INTERATTIVO BPS ──
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary)'><span style='color:var(--accent-green);margin-right:0.5rem'>&#9678;</span>Simulatore P&amp;L</span>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
+
+    _bps_spot    = round(spot, 2)
+    _bps_ks      = round(bps_K_venduta, 2)
+    _bps_kl      = round(bps_K_comprata, 2)
+    _bps_credit  = round(bps_credito, 4)
+    _bps_iv      = round(sigma * 100, 1)
+    _bps_dte     = int(dte)
+    _bps_width   = round(_bps_ks - _bps_kl, 2)
+    _bps_maxp    = round(_bps_credit * 100, 2)
+    _bps_maxl    = round((_bps_width - _bps_credit) * 100, 2)
+    _bps_be      = round(_bps_ks - _bps_credit, 2)
+    _bps_dist    = round((_bps_spot - _bps_be) / _bps_spot * 100, 2)
+    _bps_pct_w   = round(_bps_credit / _bps_width * 100, 1)
+
+    st.components.v1.html(f"""
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * {{ box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',system-ui,sans-serif; }}
+  body {{ background:transparent;color:#E2E8F0; }}
+  .grid4 {{ display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px; }}
+  .grid2 {{ display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px; }}
+  .card {{ background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px; }}
+  .card-label {{ font-size:11px;color:#8B9FC0;margin-bottom:3px;letter-spacing:0.05em; }}
+  .card-val {{ font-size:18px;font-weight:600; }}
+  .green {{ color:#00E5A0; }} .red {{ color:#FF5A5A; }} .cyan {{ color:#00C2FF; }} .gold {{ color:#FFB547; }}
+  .controls {{ background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 16px;margin-bottom:12px; }}
+  .ctrl-row {{ display:flex;align-items:center;gap:14px;margin-bottom:8px; }}
+  .ctrl-row:last-child {{ margin-bottom:0; }}
+  .ctrl-label {{ font-size:11px;color:#8B9FC0;white-space:nowrap;letter-spacing:0.08em;min-width:90px; }}
+  .ctrl-row input[type=range] {{ flex:1;accent-color:#00C2FF;height:4px; }}
+  .ctrl-val {{ font-size:16px;font-weight:600;color:#00C2FF;min-width:60px;text-align:right; }}
+  .badge {{ display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:0.08em; }}
+  .badge-green {{ background:rgba(0,229,160,0.12);color:#00E5A0;border:1px solid rgba(0,229,160,0.25); }}
+  .badge-gold {{ background:rgba(255,181,71,0.12);color:#FFB547;border:1px solid rgba(255,181,71,0.25); }}
+  .badge-red {{ background:rgba(255,90,90,0.12);color:#FF5A5A;border:1px solid rgba(255,90,90,0.25); }}
+  .legend {{ display:flex;gap:16px;margin-bottom:8px;font-size:11px;color:#8B9FC0;align-items:center; }}
+  .leg-dot {{ width:12px;height:3px;display:inline-block;border-radius:2px; }}
+  .status-grid {{ display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px; }}
+</style>
+</head>
+<body>
+
+<div class="grid4">
+  <div class="card"><div class="card-label">Strike venduto</div><div class="card-val cyan">${_bps_ks}</div></div>
+  <div class="card"><div class="card-label">Strike comprato</div><div class="card-val gold">${_bps_kl}</div></div>
+  <div class="card"><div class="card-label">Break-even</div><div class="card-val">${_bps_be}</div></div>
+  <div class="card">
+    <div class="card-label">Credito / larghezza</div>
+    <div class="card-val green">+${_bps_credit}</div>
+    <span class="badge {'badge-green' if _bps_pct_w >= 33 else 'badge-gold' if _bps_pct_w >= 25 else 'badge-red'}">{_bps_pct_w}%</span>
+  </div>
+</div>
+
+<div class="grid4">
+  <div class="card"><div class="card-label">Max profitto</div><div class="card-val green">+€{_bps_maxp}</div></div>
+  <div class="card"><div class="card-label">Max perdita</div><div class="card-val red">-€{_bps_maxl}</div></div>
+  <div class="card"><div class="card-label">Distanza BE</div><div class="card-val">{_bps_dist}%</div></div>
+  <div class="card"><div class="card-label">Larghezza spread</div><div class="card-val">${_bps_width}</div></div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-row">
+    <span class="ctrl-label">DTE SIMULATI</span>
+    <input type="range" id="dteSlider" min="0" max="{_bps_dte}" value="{_bps_dte}" step="1">
+    <div class="ctrl-val"><span id="dteVal">{_bps_dte}</span> <span style="font-size:11px;color:#8B9FC0;">gg</span></div>
+  </div>
+  <div class="ctrl-row">
+    <span class="ctrl-label">IV SIMULATA</span>
+    <input type="range" id="ivSlider" min="10" max="60" value="{_bps_iv}" step="0.5">
+    <div class="ctrl-val"><span id="ivVal">{_bps_iv}</span><span style="font-size:11px;color:#8B9FC0;">%</span></div>
+  </div>
+</div>
+
+<div class="legend">
+  <span><span class="leg-dot" style="background:#00C2FF;"></span> Valore attuale</span>
+  <span><span class="leg-dot" style="background:#8B9FC0;"></span> A scadenza</span>
+  <span><span class="leg-dot" style="background:#FF5A5A;width:2px;height:12px;"></span> Spot ({_bps_spot})</span>
+</div>
+
+<div style="position:relative;width:100%;height:300px;">
+  <canvas id="bpsChart"></canvas>
+</div>
+
+<div class="status-grid" id="statusBar"></div>
+
+<script>
+const SPOT={_bps_spot}, KS={_bps_ks}, KL={_bps_kl};
+const CREDIT={_bps_credit}, WIDTH={_bps_width};
+const TOTAL_DTE={_bps_dte}, R=0.04;
+let IV={_bps_iv/100};
+
+function norm(x){{
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const sign=x<0?-1:1,t=1/(1+p*Math.abs(x));
+  return 0.5*(1+sign*(1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x/2)));
+}}
+
+function bsPut(S,K,T,r,sigma){{
+  if(T<=0.0001) return Math.max(K-S,0);
+  const d1=(Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
+  const d2=d1-sigma*Math.sqrt(T);
+  return K*Math.exp(-r*T)*norm(-d2)-S*norm(-d1);
+}}
+
+function bpsCurrent(price,dte,iv){{
+  const T=Math.max(dte,0.1)/365;
+  const ps=bsPut(price,KS,T,R,iv), pl=bsPut(price,KL,T,R,iv);
+  return Math.round((CREDIT-(ps-pl))*100*100)/100;
+}}
+
+function bpsExp(price){{
+  if(price<=KL) return Math.round(-(WIDTH-CREDIT)*100*100)/100;
+  if(price<KS)  return Math.round((CREDIT-(KS-price))*100*100)/100;
+  return Math.round(CREDIT*100*100)/100;
+}}
+
+const pMin=Math.round(KL*0.88), pMax=Math.round(SPOT*1.10);
+const prices=[];
+for(let p=pMin;p<=pMax;p+=Math.max(1,Math.round((pMax-pMin)/70))) prices.push(p);
+
+const chart=new Chart(document.getElementById('bpsChart'),{{
+  type:'line',
+  data:{{
+    labels:prices.map(p=>'$'+p),
+    datasets:[
+      {{label:'Valore attuale',data:[],borderColor:'#00C2FF',backgroundColor:'rgba(0,194,255,0.07)',fill:true,pointRadius:0,borderWidth:2.5,tension:0.3}},
+      {{label:'A scadenza',data:[],borderColor:'#8B9FC0',backgroundColor:'transparent',fill:false,pointRadius:0,borderWidth:1.5,tension:0,borderDash:[6,4]}}
+    ]
+  }},
+  options:{{
+    responsive:true,maintainAspectRatio:false,
+    interaction:{{mode:'index',intersect:false}},
+    plugins:{{
+      legend:{{display:false}},
+      tooltip:{{
+        backgroundColor:'#0D1520',borderColor:'rgba(0,194,255,0.3)',borderWidth:1,
+        titleColor:'#E2E8F0',bodyColor:'#8B9FC0',
+        callbacks:{{
+          title:ctx=>'SPY a '+ctx[0].label,
+          label:ctx=>{{const v=ctx.dataset.data[ctx.dataIndex];if(v===null||v===undefined)return null;return ctx.dataset.label+': '+(v>=0?'+':'')+'€'+v;}}
+        }}
+      }}
+    }},
+    scales:{{
+      x:{{ticks:{{autoSkip:true,maxTicksLimit:10,color:'#4A6080',font:{{size:10}}}},grid:{{color:'rgba(255,255,255,0.04)'}}}},
+      y:{{ticks:{{color:'#4A6080',font:{{size:10}},callback:v=>(v>=0?'+':'')+'€'+v}},grid:{{color:'rgba(255,255,255,0.04)'}}}}
+    }}
+  }}
+}});
+
+function updateChart(dte,iv){{
+  chart.data.datasets[0].data=prices.map(p=>bpsCurrent(p,dte,iv));
+  chart.data.datasets[1].data=prices.map(p=>bpsExp(p));
+  chart.update('none');
+  const spotPnl=bpsCurrent(SPOT,dte,iv);
+  const tp50=Math.round(CREDIT*100*0.5*100)/100;
+  const sl2x=Math.round(CREDIT*100*2*100)/100;
+  const pctD=Math.round((1-dte/TOTAL_DTE)*100);
+  document.getElementById('statusBar').innerHTML=`
+    <div class="card"><div class="card-label">P&L allo spot</div><div class="card-val ${{spotPnl>=0?'green':'red'}}">${{spotPnl>=0?'+':''}}€${{spotPnl}}</div></div>
+    <div class="card"><div class="card-label">Theta decayato</div><div class="card-val">${{pctD}}%</div></div>
+    <div class="card"><div class="card-label">Take profit 50%</div><div class="card-val green">+€${{tp50}}</div></div>
+    <div class="card"><div class="card-label">Stop loss 2x</div><div class="card-val red">-€${{sl2x}}</div></div>
+  `;
+}}
+
+let curDte=TOTAL_DTE;
+document.getElementById('dteSlider').addEventListener('input',function(){{
+  curDte=parseInt(this.value);
+  document.getElementById('dteVal').textContent=curDte;
+  updateChart(curDte,IV);
+}});
+document.getElementById('ivSlider').addEventListener('input',function(){{
+  IV=parseFloat(this.value)/100;
+  document.getElementById('ivVal').textContent=this.value;
+  updateChart(curDte,IV);
+}});
+
+updateChart(TOTAL_DTE,IV);
+</script>
+</body>
+</html>
+""", height=640)
     st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
     # ── RIEPILOGO BPS ──
