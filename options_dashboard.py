@@ -346,8 +346,108 @@ div[data-testid="stHorizontalBlock"] .stButton > button:focus {
     transform: translateY(-2px);
 }
 .ph-tab:hover::after { opacity:1; }
-.ph-tab:active { transform: translateY(0); }
+/* ── STRATEGY ADVISOR — Nuvoletta ── */
+.ph-advisor-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 2.2rem;
+}
 
+.ph-advisor-cloud {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 260px;
+    padding: 0.85rem 2rem;
+    background: rgba(0, 194, 255, 0.06);
+    border: 1px solid rgba(0, 194, 255, 0.28);
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.28s ease;
+    animation: fade-up 1s cubic-bezier(.22,.68,0,1.2) 0.3s both;
+}
+
+/* bolle della nuvoletta */
+.ph-advisor-cloud::before,
+.ph-advisor-cloud::after {
+    content: '';
+    position: absolute;
+    background: rgba(0, 194, 255, 0.06);
+    border: 1px solid rgba(0, 194, 255, 0.22);
+    border-radius: 50%;
+    transition: all 0.28s ease;
+}
+.ph-advisor-cloud::before {
+    width: 36px; height: 36px;
+    bottom: -14px; left: 32px;
+}
+.ph-advisor-cloud::after {
+    width: 20px; height: 20px;
+    bottom: -24px; left: 20px;
+}
+
+.ph-advisor-cloud:hover {
+    background: rgba(0, 194, 255, 0.12);
+    border-color: rgba(0, 194, 255, 0.6);
+    box-shadow:
+        0 0 28px 6px rgba(0,194,255,0.18),
+        0 0 60px 15px rgba(0,194,255,0.08),
+        inset 0 0 20px rgba(0,194,255,0.07);
+    transform: translateY(-3px);
+}
+.ph-advisor-cloud:hover::before,
+.ph-advisor-cloud:hover::after {
+    border-color: rgba(0,194,255,0.45);
+    background: rgba(0,194,255,0.10);
+}
+
+.ph-advisor-icon {
+    font-size: 1.1rem;
+    margin-right: 0.7rem;
+    opacity: 0.85;
+}
+
+.ph-advisor-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(0, 194, 255, 0.88);
+    letter-spacing: 0.02em;
+}
+
+.ph-advisor-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: rgba(0, 194, 255, 0.5);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 1px;
+}
+
+/* Separatore tra strategie e advisor */
+.ph-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 460px;
+    margin: 1.8rem auto 0;
+}
+.ph-divider::before, .ph-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+}
+.ph-divider-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -366,7 +466,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button:focus {
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Pulsanti Streamlit invisibili sovrapposti ai tab via CSS ──
+    # ── Pulsanti Streamlit — griglia 2x2 ──
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Put Scoperta", key="splash_ps"):
@@ -376,6 +476,49 @@ div[data-testid="stHorizontalBlock"] .stButton > button:focus {
         if st.button("Bull Put Spread", key="splash_bps"):
             st.session_state.strategia = "bull_put_spread"
             st.rerun()
+    col3, col4 = st.columns(2)
+    with col3:
+        if st.button("Long Call", key="splash_lc"):
+            st.session_state.strategia = "long_call"
+            st.rerun()
+    with col4:
+        if st.button("Long Put", key="splash_lp"):
+            st.session_state.strategia = "long_put"
+            st.rerun()
+
+    # ── Separatore + Nuvoletta Strategy Advisor ──
+    st.markdown("""
+<div class="ph-divider"><span class="ph-divider-label">AI Advisory</span></div>
+<div class="ph-advisor-wrap">
+  <div class="ph-advisor-cloud" id="advisorCloud">
+    <span class="ph-advisor-icon">&#9729;</span>
+    <div>
+      <span class="ph-advisor-text">Strategy Advisor</span>
+      <span class="ph-advisor-sub">Analisi AI &middot; Web Search &middot; Istituzionale</span>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # Bottone Streamlit invisibile sovrapposto alla nuvoletta
+    st.markdown("""
+<style>
+/* Bottone Strategy Advisor — sovrapposto alla nuvoletta */
+div[data-testid="stVerticalBlock"] > div:last-child .stButton > button {
+    position: relative !important;
+    display: block !important;
+    width: 260px !important;
+    height: 70px !important;
+    margin: -78px auto 0 auto !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+    if st.button("Strategy Advisor", key="splash_advisor"):
+        st.session_state.strategia = "strategy_advisor"
+        st.rerun()
 
     st.stop()
 
@@ -1593,7 +1736,93 @@ Lunghezza totale: massimo una pagina A4."""
     return prompt
 
 
-def genera_pdf_ai(testo: str, nome: str, ticker: str, strategia: str) -> bytes | None:
+def costruisci_prompt_advisor(ticker: str, nome: str, dati: dict) -> str:
+    """Prompt istituzionale per Strategy Advisor — classifica regime e seleziona strategia."""
+    spot     = dati.get("prezzo_spot", 0)
+    vix      = dati.get("vix", 0) or 0
+    iv_rank  = dati.get("iv_rank", 50)
+    vol_st   = dati.get("vol_storica", 0) or 0
+    var      = dati.get("variazione_gg", 0) or 0
+    vix_sym  = dati.get("vix_symbol", "^VIX")
+    oggi     = datetime.now().strftime("%d/%m/%Y")
+
+    return f"""Sei un portfolio manager senior specializzato in derivati con background quantitativo istituzionale (hedge fund / investment bank).
+
+Il tuo compito è analizzare {nome} ({ticker}) e produrre una raccomandazione di strategia in opzioni di qualità istituzionale.
+
+DATI DI MERCATO ATTUALI ({oggi}):
+- Prezzo spot: {spot:.2f}
+- Variazione giornaliera: {var:+.2f}%
+- Volatilità storica 30gg: {vol_st:.1f}%
+- {vix_sym.replace('^','')}: {vix:.2f}
+- IV Rank: {iv_rank:.0f}/100
+- Rapporto IV/HV: {(vix/vol_st if vol_st > 0 else 0):.2f}x
+
+ISTRUZIONI:
+Esegui una ricerca web approfondita su:
+1. Condizioni macro attuali (Fed, inflazione, tassi)
+2. Notizie e catalyst recenti su {nome}
+3. Posizionamento istituzionale e sentiment di mercato
+4. Livelli tecnici chiave e trend su {ticker}
+5. Put/call ratio e skew di volatilità se disponibili
+
+Poi produci un report ESATTAMENTE in questo formato (usa i separatori ─────):
+
+─────────────────────────────────────
+SINTESI ESECUTIVA
+[1-2 righe: situazione attuale e raccomandazione principale]
+
+─────────────────────────────────────
+REGIME DI MERCATO
+Volatilità: [BASSA / MEDIA / ALTA / ESTREMA] — motivazione breve
+Trend: [RIALZISTA / RIBASSISTA / LATERALE] — timeframe e motivazione
+Contesto: [RISK-ON / RISK-OFF / NEUTRO] — motivazione
+Classificazione: [es. "Alta volatilità, laterale, risk-off post-correzione"]
+
+─────────────────────────────────────
+SNAPSHOT INDICATORI
+[Tabella con i valori chiave trovati con la ricerca: IV implicita, VIX, IV Rank, trend tecnico, momentum, sentiment]
+
+─────────────────────────────────────
+STRATEGIA CONSIGLIATA
+Nome: [strategia specifica]
+Confidenza: [BASSA / MEDIA / ALTA]
+Driver principali: [3 bullet con motivazioni quantitative precise]
+Parametri suggeriti: [DTE, strike, larghezza spread se applicabile]
+Perché NON le alternative: [breve motivazione per ciascuna strategia scartata]
+
+─────────────────────────────────────
+RAGIONAMENTO ISTITUZIONALE
+[Paragrafo dettagliato, tono da strategist derivati. Includi: contesto macro, struttura della volatilità, positioning istituzionale, logica del trade]
+
+─────────────────────────────────────
+ANALISI SCENARI
+
+SCENARIO BASE (probabilità ~50%):
+- Evoluzione volatilità attesa
+- Impatto sulla strategia
+- Azione consigliata
+
+SCENARIO RIALZISTA (probabilità ~25%):
+- Evoluzione volatilità attesa
+- Impatto sulla strategia
+- Azione consigliata
+
+SCENARIO RIBASSISTA (probabilità ~25%):
+- Evoluzione volatilità attesa
+- Impatto sulla strategia
+- Azione consigliata
+
+─────────────────────────────────────
+RISCHI DA MONITORARE
+[4 rischi specifici con trigger precisi e livelli di prezzo/volatilità]
+
+─────────────────────────────────────
+CONDIZIONE NO-TRADE
+[Se il contesto non è favorevole per nessuna strategia, spiega perché e quando rientrare]
+─────────────────────────────────────
+
+Usa solo dati trovati con la ricerca web. Sii preciso, analitico, istituzionale. Niente generici."""
     """Genera un PDF con l'analisi AI della posizione."""
     if not REPORTLAB_OK:
         return None
@@ -3430,7 +3659,609 @@ updateChart(TOTAL_DTE,IV);
 elif STRATEGIA == "bull_put_spread":
     st.info("Inserisci il credito netto e la larghezza dello spread nella sidebar per visualizzare l'analisi.")
 
-# ── FOOTER ──
+# ══════════════════════════════════════════════════════════════
+# LONG CALL / LONG PUT — DASHBOARD
+# ══════════════════════════════════════════════════════════════
+if STRATEGIA in ("long_call", "long_put"):
+    is_call = STRATEGIA == "long_call"
+    tipo_label = "Long Call" if is_call else "Long Put"
+    tipo_emoji = "📈" if is_call else "📉"
+
+    import scipy.stats as _si2
+
+    def bs_option(S, K, T, r, sigma, is_call_flag):
+        if T <= 0:
+            return max(S - K, 0) if is_call_flag else max(K - S, 0)
+        d1 = (np.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*np.sqrt(T))
+        d2 = d1 - sigma*np.sqrt(T)
+        if is_call_flag:
+            return S*_si2.norm.cdf(d1) - K*np.exp(-r*T)*_si2.norm.cdf(d2)
+        else:
+            return K*np.exp(-r*T)*_si2.norm.cdf(-d2) - S*_si2.norm.cdf(-d1)
+
+    # ── Parametri sidebar long option ──
+    with st.sidebar:
+        st.markdown(f"<div class='sb-section'>{tipo_label}</div>", unsafe_allow_html=True)
+
+        # Strike
+        if "lo_strike" not in st.session_state: st.session_state["lo_strike"] = round(spot * 1.02 if is_call else spot * 0.98, 0)
+        if "lo_strike_n" not in st.session_state: st.session_state["lo_strike_n"] = st.session_state["lo_strike"]
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>STRIKE ($)</span>", unsafe_allow_html=True)
+        col_s, col_n = st.columns([2,1])
+        with col_s:
+            st.slider("lo_strike_s", float(spot*0.7), float(spot*1.3), float(st.session_state["lo_strike"]), 1.0,
+                key="lo_strike_sl", label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"lo_strike": st.session_state["lo_strike_sl"], "lo_strike_n": st.session_state["lo_strike_sl"]}))
+        with col_n:
+            st.number_input("lo_strike_ni", float(spot*0.7), float(spot*1.3), float(st.session_state["lo_strike_n"]), 1.0,
+                key="lo_strike_n", label_visibility="collapsed", format="%.0f",
+                on_change=lambda: st.session_state.update({"lo_strike": st.session_state["lo_strike_n"], "lo_strike_sl": st.session_state["lo_strike_n"]}))
+        lo_strike = float(st.session_state["lo_strike"])
+
+        # DTE già nella sidebar globale — riuso
+        lo_dte = dte
+
+        # Premio pagato
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PREMIO PAGATO ($)</span>", unsafe_allow_html=True)
+        if "lo_premio" not in st.session_state: st.session_state["lo_premio"] = round(bs_option(spot, lo_strike, lo_dte/365, 0.04, iv_pct/100, is_call), 2)
+        if "lo_premio_n" not in st.session_state: st.session_state["lo_premio_n"] = st.session_state["lo_premio"]
+        col_s, col_n = st.columns([2,1])
+        with col_s:
+            st.slider("lo_prem_s", 0.01, 100.0, float(min(st.session_state["lo_premio"], 100.0)), 0.01,
+                key="lo_prem_sl", label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"lo_premio": st.session_state["lo_prem_sl"], "lo_premio_n": st.session_state["lo_prem_sl"]}))
+        with col_n:
+            st.number_input("lo_prem_ni", 0.01, 500.0, float(st.session_state["lo_premio_n"]), 0.01,
+                key="lo_premio_n", label_visibility="collapsed", format="%.2f",
+                on_change=lambda: st.session_state.update({"lo_premio": st.session_state["lo_premio_n"], "lo_prem_sl": min(st.session_state["lo_premio_n"], 100.0)}))
+        lo_premio = float(st.session_state["lo_premio"])
+
+        # Numero contratti
+        lo_contratti = n_contratti
+
+        st.markdown("<div class='sb-section'>Analisi Scenari</div>", unsafe_allow_html=True)
+        lo_pdf_btn = st.button("Genera Report Scenari", use_container_width=True)
+
+    # ── Calcoli base ──
+    lo_sigma = iv_pct / 100
+    lo_T = lo_dte / 365
+    lo_r = 0.04
+    lo_val_attuale = bs_option(spot, lo_strike, lo_T, lo_r, lo_sigma, is_call)
+    lo_pnl_attuale = (lo_val_attuale - lo_premio) * 100 * lo_contratti
+    lo_be = lo_strike + lo_premio if is_call else lo_strike - lo_premio
+    lo_max_loss = lo_premio * 100 * lo_contratti
+
+    # ── KPI Cards ──
+    kpi_pnl_cls = "green" if lo_pnl_attuale >= 0 else "red"
+    kpi_pnl_str = f"+{fmt(lo_pnl_attuale,2)}" if lo_pnl_attuale >= 0 else fmt(lo_pnl_attuale,2)
+    st.markdown(f"""
+<div class="kpi-grid">
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; Spot</div>
+    <div class="kpi-value cyan">{fmt(spot,2)}</div>
+    <div class="kpi-sub">{'Variazione oggi' if var else ''}<br>{f'+{fmt(var,2)}%' if var and var>=0 else fmt(var,2)+'%' if var else 'N/D'}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; Valore BS attuale</div>
+    <div class="kpi-value cyan">{fmt(lo_val_attuale,4)}</div>
+    <div class="kpi-sub">Premio pagato<br>{fmt(lo_premio,2)}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; P&amp;L attuale</div>
+    <div class="kpi-value {kpi_pnl_cls}">{kpi_pnl_str} €</div>
+    <div class="kpi-sub">Su {lo_contratti} contratt{'o' if lo_contratti==1 else 'i'}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; Break-even</div>
+    <div class="kpi-value gold">{fmt(lo_be,2)}</div>
+    <div class="kpi-sub">Strike {'+ premio' if is_call else '- premio'}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; Max perdita</div>
+    <div class="kpi-value red">-{fmt(lo_max_loss,2)} €</div>
+    <div class="kpi-sub">Premio pagato totale</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Grafico P&L dinamico con slider DTE e IV ──
+    st.markdown(f"<div class='section-title'>Simulatore P&amp;L — {tipo_label}</div>", unsafe_allow_html=True)
+
+    prices_lo = [round(spot * (1 + p/100), 2) for p in range(-20, 21)]
+
+    lo_chart_html = f"""
+<div style="font-family:var(--bs-body-font-family, sans-serif); padding: 0.5rem 0;">
+
+  <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+    <div style="flex:1; min-width:200px;">
+      <label style="font-size:0.65rem; color:#8B9FC0; letter-spacing:0.1em; font-family:monospace;">DTE RESIDUI</label>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+        <input type="range" id="dteR" min="0" max="{lo_dte}" value="{lo_dte}" step="1" style="flex:1;">
+        <span id="dteRval" style="font-size:1rem; font-weight:600; min-width:40px; text-align:right; color:#E8EDF5;">{lo_dte}</span>
+        <span style="font-size:0.7rem; color:#8B9FC0;">gg</span>
+      </div>
+    </div>
+    <div style="flex:1; min-width:200px;">
+      <label style="font-size:0.65rem; color:#8B9FC0; letter-spacing:0.1em; font-family:monospace;">IV FUTURA (%)</label>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+        <input type="range" id="ivR" min="5" max="80" value="{iv_pct:.1f}" step="0.5" style="flex:1;">
+        <span id="ivRval" style="font-size:1rem; font-weight:600; min-width:40px; text-align:right; color:#E8EDF5;">{iv_pct:.1f}</span>
+        <span style="font-size:0.7rem; color:#8B9FC0;">%</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:1rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
+      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">P&L ALLO SPOT</div>
+      <div id="pnlSpot" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+    </div>
+    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
+      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">VALORE OPZIONE</div>
+      <div id="valOpt" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+    </div>
+    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
+      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">MOLTIPLICATORE</div>
+      <div id="moltip" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+    </div>
+    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
+      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">THETA DECAY</div>
+      <div id="thetaV" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+    </div>
+  </div>
+
+  <canvas id="loChart" style="width:100%; height:300px;"></canvas>
+
+  <!-- TABELLA SCENARI -->
+  <div style="margin-top:1.5rem;">
+    <div style="font-size:0.65rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.12em; margin-bottom:0.5rem;">TABELLA SCENARI — P&L PER PREZZO × IV</div>
+    <div style="overflow-x:auto;">
+      <table id="scenTable" style="width:100%; border-collapse:collapse; font-size:0.72rem; font-family:monospace;"></table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const IS_CALL  = {'true' if is_call else 'false'};
+const SPOT     = {spot};
+const STRIKE   = {lo_strike};
+const PREMIO   = {lo_premio};
+const CONTRATTI= {lo_contratti};
+const TOTAL_DTE= {lo_dte};
+const R        = 0.04;
+
+function normCDF(x) {{
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const sign = x<0?-1:1;
+  const t = 1/(1+p*Math.abs(x));
+  const y = 1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x/2);
+  return 0.5*(1+sign*y);
+}}
+
+function bsOption(S, K, T, r, sigma) {{
+  if(T <= 0.0001) return IS_CALL ? Math.max(S-K,0) : Math.max(K-S,0);
+  const d1 = (Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
+  const d2 = d1-sigma*Math.sqrt(T);
+  if(IS_CALL) return S*normCDF(d1)-K*Math.exp(-r*T)*normCDF(d2);
+  else        return K*Math.exp(-r*T)*normCDF(-d2)-S*normCDF(-d1);
+}}
+
+function bsTheta(S, K, T, r, sigma) {{
+  if(T <= 0.0001) return 0;
+  const d1=(Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
+  const d2=d1-sigma*Math.sqrt(T);
+  const nd1=Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI);
+  if(IS_CALL) return (-S*nd1*sigma/(2*Math.sqrt(T))-r*K*Math.exp(-r*T)*normCDF(d2))/365;
+  else        return (-S*nd1*sigma/(2*Math.sqrt(T))+r*K*Math.exp(-r*T)*normCDF(-d2))/365;
+}}
+
+const prices = [];
+for(let p=-20; p<=20; p++) prices.push(+(SPOT*(1+p/100)).toFixed(2));
+
+const chart = new Chart(document.getElementById('loChart'), {{
+  type:'line',
+  data:{{
+    labels: prices.map(p=>'$'+p.toFixed(0)),
+    datasets:[
+      {{ label:'P&L attuale', data:[], borderColor:'#00C2FF', backgroundColor:'rgba(0,194,255,0.08)', fill:true, pointRadius:0, borderWidth:2.5, tension:0.3 }},
+      {{ label:'P&L a scadenza', data:[], borderColor:'#888780', backgroundColor:'transparent', fill:false, pointRadius:0, borderWidth:1.5, tension:0, borderDash:[6,4] }}
+    ]
+  }},
+  options:{{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{{mode:'index',intersect:false}},
+    plugins:{{ legend:{{display:false}}, tooltip:{{
+      callbacks:{{
+        title: ctx => 'SPY a '+ctx[0].label,
+        label: ctx => {{
+          const v=ctx.dataset.data[ctx.dataIndex];
+          if(v===null||v===undefined) return null;
+          return ctx.dataset.label+': '+(v>=0?'+':'')+'$'+v.toFixed(0);
+        }}
+      }}
+    }} }},
+    scales:{{
+      x:{{ ticks:{{autoSkip:true,maxTicksLimit:11,color:'#888780',font:{{size:11}}}}, grid:{{color:'rgba(136,135,128,0.15)'}} }},
+      y:{{ ticks:{{color:'#888780',font:{{size:11}},callback:v=>(v>=0?'+':'')+' $'+v.toFixed(0)}}, grid:{{color:'rgba(136,135,128,0.15)'}} }}
+    }}
+  }}
+}});
+
+function updateChart() {{
+  const dte  = parseFloat(document.getElementById('dteR').value);
+  const iv   = parseFloat(document.getElementById('ivR').value)/100;
+  const T    = Math.max(dte/365, 0.0001);
+  document.getElementById('dteRval').textContent = Math.round(dte);
+  document.getElementById('ivRval').textContent  = parseFloat(document.getElementById('ivR').value).toFixed(1);
+
+  const currentData = prices.map(p => +((bsOption(p,STRIKE,T,R,iv)-PREMIO)*100*CONTRATTI).toFixed(0));
+  const expData     = prices.map(p => {{
+    const v = IS_CALL ? Math.max(p-STRIKE,0) : Math.max(STRIKE-p,0);
+    return +(( v - PREMIO)*100*CONTRATTI).toFixed(0);
+  }});
+  chart.data.datasets[0].data = currentData;
+  chart.data.datasets[1].data = expData;
+  chart.update('none');
+
+  const spotVal  = bsOption(SPOT,STRIKE,T,R,iv);
+  const spotPnl  = (spotVal-PREMIO)*100*CONTRATTI;
+  const molt     = spotVal/PREMIO;
+  const theta    = bsTheta(SPOT,STRIKE,T,R,iv)*100*CONTRATTI;
+  const pnlEl    = document.getElementById('pnlSpot');
+  pnlEl.textContent = (spotPnl>=0?'+':'')+'$'+spotPnl.toFixed(0);
+  pnlEl.style.color  = spotPnl>=0?'#00E5A0':'#FF5A5A';
+  document.getElementById('valOpt').textContent = '$'+spotVal.toFixed(4);
+  document.getElementById('moltip').textContent = molt.toFixed(2)+'x';
+  document.getElementById('moltip').style.color = molt>=1?'#00E5A0':'#FF5A5A';
+  document.getElementById('thetaV').textContent = '$'+theta.toFixed(2)+'/gg';
+  document.getElementById('thetaV').style.color  = '#FF5A5A';
+
+  buildTable(dte, iv);
+}}
+
+function buildTable(dte, baseIV) {{
+  const ivLevels = [baseIV*0.6, baseIV*0.8, baseIV, baseIV*1.2, baseIV*1.4];
+  const ivLabels = ['-40%', '-20%', 'Attuale', '+20%', '+40%'];
+  const T = Math.max(dte/365, 0.0001);
+  const priceRange = [];
+  for(let p=-15; p<=15; p+=3) priceRange.push(+(SPOT*(1+p/100)).toFixed(2));
+
+  let html = '<thead><tr><th style="padding:4px 8px;color:#8B9FC0;text-align:left;border-bottom:1px solid #243550;">Prezzo</th>';
+  ivLabels.forEach(l => html += `<th style="padding:4px 8px;color:#8B9FC0;text-align:right;border-bottom:1px solid #243550;">${{l}}</th>`);
+  html += '</tr></thead><tbody>';
+
+  priceRange.forEach(p => {{
+    const isSpot = Math.abs(p-SPOT) < SPOT*0.02;
+    const rowStyle = isSpot ? 'background:rgba(0,194,255,0.05);' : '';
+    html += `<tr style="${{rowStyle}}"><td style="padding:3px 8px;color:#8B9FC0;white-space:nowrap;">${{p>=SPOT?'▲':'▼'}} ${{p.toFixed(0)}}</td>`;
+    ivLevels.forEach(iv => {{
+      const val = bsOption(p,STRIKE,T,R,iv);
+      const pnl = (val-PREMIO)*100*CONTRATTI;
+      const bg  = pnl>0 ? `rgba(0,229,160,${{Math.min(pnl/500,0.35)}})` : `rgba(255,90,90,${{Math.min(Math.abs(pnl)/500,0.35)}})`;
+      const col = pnl>0 ? '#00E5A0' : '#FF5A5A';
+      html += `<td style="padding:3px 8px;text-align:right;background:${{bg}};color:${{col}};font-weight:500;">${{pnl>=0?'+':''}}${{pnl.toFixed(0)}}</td>`;
+    }});
+    html += '</tr>';
+  }});
+  html += '</tbody>';
+  document.getElementById('scenTable').innerHTML = html;
+}}
+
+document.getElementById('dteR').addEventListener('input', updateChart);
+document.getElementById('ivR').addEventListener('input', updateChart);
+updateChart();
+</script>
+"""
+    st.components.v1.html(lo_chart_html, height=850, scrolling=False)
+
+    # ── Riepilogo operazione ──
+    st.markdown(f"""
+<div class="panel">
+  <div class="panel-title">Riepilogo Operazione — {tipo_label}</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.6rem;margin-top:0.5rem;">
+    <div class="tip-box-static"><span class="label">Sottostante</span><span class="val">{nome}</span></div>
+    <div class="tip-box-static"><span class="label">Spot</span><span class="val">{fmt(spot,2)}</span></div>
+    <div class="tip-box-static"><span class="label">Strike</span><span class="val">{fmt(lo_strike,2)}</span></div>
+    <div class="tip-box-static"><span class="label">DTE</span><span class="val">{lo_dte} gg</span></div>
+    <div class="tip-box-static"><span class="label">Premio pagato</span><span class="val">{fmt(lo_premio,2)} $ ({fmt(lo_premio*100,2)} € / contratto)</span></div>
+    <div class="tip-box-static"><span class="label">Contratti</span><span class="val">{lo_contratti}</span></div>
+    <div class="tip-box-static"><span class="label">Costo totale</span><span class="val">{fmt(lo_premio*100*lo_contratti,2)} €</span></div>
+    <div class="tip-box-static"><span class="label">Break-even</span><span class="val">{fmt(lo_be,2)}</span></div>
+    <div class="tip-box-static"><span class="label">Max perdita</span><span class="val">-{fmt(lo_max_loss,2)} € (premio pagato)</span></div>
+    <div class="tip-box-static"><span class="label">IV IND</span><span class="val">{iv_pct:.1f}%</span></div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════
+# STRATEGY ADVISOR — DASHBOARD
+# ══════════════════════════════════════════════════════════════
+if STRATEGIA == "strategy_advisor":
+
+    # ── Header ──
+    st.markdown("""
+<div class="ph-header">
+  <div style="display:flex;align-items:center;gap:1.2rem">
+    <div style="display:flex;flex-direction:column">
+      <span style="font-size:1.45rem;font-weight:700;color:var(--accent-cyan);letter-spacing:-0.01em">Strategy Advisor</span>
+      <span style="font-size:0.7rem;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-top:1px">Analisi AI Istituzionale &middot; Web Search &middot; Raccomandazione Strategia</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span class="ph-tag" style="border-color:rgba(0,194,255,0.3);color:rgba(0,194,255,0.7)">&#9679; AI Powered</span>
+    <span class="ph-tag">v5.1</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Sidebar Strategy Advisor ──
+    with st.sidebar:
+        st.markdown("<div class='sb-section'>Strategy Advisor</div>", unsafe_allow_html=True)
+
+        # Selezione ticker
+        TICKER_ADVISOR = {
+            "NASDAQ 100 (QQQ)":   "QQQ",
+            "S&P 500 (SPY)":      "SPY",
+            "S&P 500 (^GSPC)":    "^GSPC",
+            "Nasdaq 100 (^NDX)":  "^NDX",
+            "Dow Jones (^DJI)":   "^DJI",
+            "Apple (AAPL)":       "AAPL",
+            "Tesla (TSLA)":       "TSLA",
+            "NVIDIA (NVDA)":      "NVDA",
+            "Microsoft (MSFT)":   "MSFT",
+            "Amazon (AMZN)":      "AMZN",
+        }
+        adv_ticker_nome = st.selectbox("Sottostante", list(TICKER_ADVISOR.keys()), index=1, key="adv_ticker")
+        adv_tk = TICKER_ADVISOR[adv_ticker_nome]
+
+        st.markdown("<div class='sb-section'>Parametri Analisi</div>", unsafe_allow_html=True)
+
+        # DTE orizzonte analisi
+        adv_dte = st.select_slider("Orizzonte temporale (DTE)",
+            options=[14, 21, 30, 45, 60, 90], value=45,
+            help="DTE di riferimento per la strategia consigliata")
+
+        # Capitale disponibile
+        if "adv_capitale" not in st.session_state: st.session_state["adv_capitale"] = 10000
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>CAPITALE DISPONIBILE (€)</span>", unsafe_allow_html=True)
+        adv_capitale = st.number_input("adv_cap", 1000, 500000,
+            st.session_state["adv_capitale"], 1000,
+            label_visibility="collapsed", key="adv_cap_input", format="%d")
+
+        st.markdown("<div class='sb-section'>Avvia Analisi</div>", unsafe_allow_html=True)
+
+        # Password AI
+        import os as _os2
+        ADV_PWD = _os2.environ.get("AI_PASSWORD", "")
+        if "adv_sbloccato" not in st.session_state: st.session_state["adv_sbloccato"] = False
+
+        if not st.session_state["adv_sbloccato"]:
+            st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PASSWORD</span>", unsafe_allow_html=True)
+            adv_pwd_input = st.text_input("adv_pwd", type="password",
+                label_visibility="collapsed", placeholder="Inserisci password…", key="adv_pwd")
+            if adv_pwd_input:
+                if adv_pwd_input == ADV_PWD:
+                    st.session_state["adv_sbloccato"] = True
+                    st.rerun()
+                else:
+                    st.error("Password errata.")
+            adv_btn = st.button("🔒 Avvia Strategy Advisor", use_container_width=True, disabled=True)
+        else:
+            col_adv, col_lock = st.columns([4,1])
+            with col_lock:
+                if st.button("🔓", key="adv_lock", help="Blocca", use_container_width=True):
+                    st.session_state["adv_sbloccato"] = False
+                    st.rerun()
+            adv_btn = st.button("Avvia Strategy Advisor", use_container_width=True,
+                help="Analizza il sottostante con AI e web search per suggerire la strategia ottimale")
+
+        # Torna alla home
+        st.markdown("<div class='sb-section'></div>", unsafe_allow_html=True)
+        if st.button("← Torna alla Home", use_container_width=True, key="adv_home"):
+            st.session_state.strategia = None
+            st.rerun()
+
+    # ── Recupero dati per advisor ──
+    if "adv_dati" not in st.session_state or st.session_state.get("adv_tk_cache") != adv_tk:
+        with st.spinner(f"Recupero dati per {adv_tk}…"):
+            st.session_state["adv_dati"] = recupera_dati_mercato(adv_tk)
+            st.session_state["adv_tk_cache"] = adv_tk
+    adv_dati = st.session_state["adv_dati"]
+
+    if adv_dati.get("errore"):
+        st.error(f"Errore dati: {adv_dati['errore']}")
+    else:
+        adv_spot   = adv_dati["prezzo_spot"]
+        adv_vix    = adv_dati["vix"] or 0
+        adv_ivr    = adv_dati["iv_rank"]
+        adv_vol    = adv_dati["vol_storica"]
+        adv_var    = adv_dati["variazione_gg"]
+        adv_nome   = adv_dati["nome"]
+        adv_vix_sym= adv_dati.get("vix_symbol", "^VIX")
+        adv_vix_lbl= "VXN" if adv_vix_sym == "^VXN" else "VIX"
+
+        # ── KPI snapshot ──
+        iv_hv_ratio = round(adv_vix / adv_vol, 2) if adv_vol > 0 else 0
+        regime_vol  = "ESTREMA" if adv_vix >= 35 else "ALTA" if adv_vix >= 25 else "MEDIA" if adv_vix >= 18 else "BASSA"
+        regime_ivr  = "ALTO" if adv_ivr >= 50 else "MEDIO" if adv_ivr >= 30 else "BASSO"
+        vol_col     = "green" if adv_vix >= 25 else "gold" if adv_vix >= 18 else "red"
+        ivr_col     = "green" if adv_ivr >= 50 else "gold" if adv_ivr >= 30 else "red"
+        var_col     = "green" if adv_var >= 0 else "red"
+
+        st.markdown(f"""
+<div class="kpi-grid">
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; Spot</div>
+    <div class="kpi-value cyan">{fmt(adv_spot,2)}</div>
+    <div class="kpi-sub">Variazione oggi<br><span style="color:var(--{'accent-green' if adv_var>=0 else 'accent-red'})">{adv_var:+.2f}%</span></div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; {adv_vix_lbl}</div>
+    <div class="kpi-value {vol_col}">{fmt(adv_vix,2)}</div>
+    <div class="kpi-sub">Regime volatilità<br>{regime_vol}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; IV Rank</div>
+    <div class="kpi-value {ivr_col}">{fmt(adv_ivr,0)}/100</div>
+    <div class="kpi-sub">Premio<br>{regime_ivr}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; Vol. Storica 30gg</div>
+    <div class="kpi-value cyan">{fmt(adv_vol,1)}%</div>
+    <div class="kpi-sub">IV/HV ratio<br>{iv_hv_ratio}x</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; DTE Orizzonte</div>
+    <div class="kpi-value gold">{adv_dte} gg</div>
+    <div class="kpi-sub">Capitale<br>€{adv_capitale:,}</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+        # ── Pre-classificazione rule-based (mostrata subito) ──
+        st.markdown("<div class='section-title'>Pre-Classificazione Rule-Based</div>", unsafe_allow_html=True)
+
+        # Logica rule-based
+        if adv_vix >= 35:
+            rb_vol = "ESTREMA — mercato in panic selling"
+            rb_strat = "Long Put / Bear Put Spread"
+            rb_reason = "VIX estremo indica capitolazione — opportunità direzionali ribassiste o protezione"
+            rb_conf = "MEDIA"
+            rb_cls = "red"
+        elif adv_vix >= 25 and adv_ivr >= 50:
+            rb_vol = "ALTA con IV Rank elevato — condizioni premium ideali"
+            rb_strat = "Iron Condor / Bull Put Spread"
+            rb_reason = "IV gonfiata + IV Rank alto = massima efficienza vendita premium"
+            rb_conf = "ALTA"
+            rb_cls = "green"
+        elif adv_vix >= 20 and adv_ivr >= 30:
+            rb_vol = "MEDIA-ALTA — condizioni accettabili"
+            rb_strat = "Bull Put Spread"
+            rb_reason = "IV sufficiente per vendita premium con rischio definito"
+            rb_conf = "MEDIA"
+            rb_cls = "gold"
+        elif adv_vix < 18 and adv_ivr < 30:
+            rb_vol = "BASSA — premi insufficienti per vendita"
+            rb_strat = "Long Call / Bull Call Spread"
+            rb_reason = "IV bassa = opzioni economiche, favorevole per acquisto direzionale"
+            rb_conf = "MEDIA"
+            rb_cls = "cyan"
+        else:
+            rb_vol = "NEUTRO — contesto misto"
+            rb_strat = "Attendere condizioni migliori"
+            rb_reason = "IV Rank e VIX non segnalano un edge chiaro in nessuna direzione"
+            rb_conf = "BASSA"
+            rb_cls = "gold"
+
+        st.markdown(f"""
+<div class="panel" style="border-left:3px solid var(--accent-{'green' if rb_cls=='green' else 'red' if rb_cls=='red' else 'cyan' if rb_cls=='cyan' else 'gold'});">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+    <div>
+      <div style="font-size:0.6rem;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:0.12em;margin-bottom:4px">REGIME VOLATILITÀ</div>
+      <div style="font-size:0.9rem;font-weight:600;color:var(--text-primary)">{rb_vol}</div>
+    </div>
+    <div>
+      <div style="font-size:0.6rem;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:0.12em;margin-bottom:4px">STRATEGIA RULE-BASED</div>
+      <div style="font-size:0.9rem;font-weight:600;color:var(--accent-cyan)">{rb_strat}</div>
+    </div>
+    <div>
+      <div style="font-size:0.6rem;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:0.12em;margin-bottom:4px">CONFIDENZA</div>
+      <div style="font-size:0.9rem;font-weight:600;color:var(--{'accent-green' if rb_conf=='ALTA' else 'accent-gold' if rb_conf=='MEDIA' else 'accent-red'})">{rb_conf}</div>
+    </div>
+  </div>
+  <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary);font-style:italic">{rb_reason}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        # ── Analisi AI approfondita ──
+        st.markdown("<div class='section-title'>Analisi AI Istituzionale</div>", unsafe_allow_html=True)
+
+        if adv_btn:
+            with st.spinner("Strategy Advisor in esecuzione — ricerca web approfondita in corso…"):
+                prompt_adv = costruisci_prompt_advisor(adv_tk, adv_nome, adv_dati)
+                testo_adv = chiama_claude(prompt_adv)
+            st.session_state["adv_risultato"] = testo_adv
+            st.session_state["adv_ticker_analizzato"] = adv_tk
+
+        if "adv_risultato" in st.session_state and st.session_state.get("adv_ticker_analizzato") == adv_tk:
+            testo = st.session_state["adv_risultato"]
+            if testo.startswith("ERRORE"):
+                st.error(testo)
+            else:
+                # Parser sezioni
+                import re as _re_adv
+                sezioni_adv = _re_adv.split(r'─{5,}', testo)
+                sezione_map = {}
+                titoli_attesi = [
+                    "SINTESI", "REGIME", "SNAPSHOT", "STRATEGIA",
+                    "RAGIONAMENTO", "SCENARI", "RISCHI", "NO-TRADE", "NO TRADE"
+                ]
+                for blocco in sezioni_adv:
+                    blocco = blocco.strip()
+                    if not blocco: continue
+                    prima_riga = blocco.split("\n")[0].strip().upper()
+                    for t in titoli_attesi:
+                        if t in prima_riga:
+                            sezione_map[t] = "\n".join(blocco.split("\n")[1:]).strip()
+                            break
+
+                # Render sezioni con styling dedicato
+                def render_sezione(titolo_display, chiavi, icon=""):
+                    for k in chiavi:
+                        if k in sezione_map and sezione_map[k]:
+                            contenuto = sezione_map[k]
+                            # Pulizia markdown
+                            contenuto = _re_adv.sub(r'\*\*(.*?)\*\*', r'\1', contenuto)
+                            contenuto = _re_adv.sub(r'#{1,3}\s*', '', contenuto, flags=_re_adv.MULTILINE)
+                            linee = [l for l in contenuto.split("\n") if l.strip()]
+                            html_contenuto = ""
+                            for l in linee:
+                                l = l.strip().lstrip("•-–").strip()
+                                if not l: continue
+                                html_contenuto += f'<p style="margin:0.3rem 0;font-size:0.82rem;color:var(--text-secondary);line-height:1.55">{l}</p>'
+                            st.markdown(f"""
+<div class="panel" style="margin-bottom:0.8rem;">
+  <div style="font-size:0.6rem;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:0.14em;margin-bottom:0.5rem">{icon} {titolo_display}</div>
+  {html_contenuto}
+</div>""", unsafe_allow_html=True)
+                            return
+                    st.markdown(f"""
+<div class="panel" style="margin-bottom:0.8rem;opacity:0.4;">
+  <div style="font-size:0.6rem;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:0.14em">{icon} {titolo_display} — dati non disponibili</div>
+</div>""", unsafe_allow_html=True)
+
+                render_sezione("SINTESI ESECUTIVA", ["SINTESI"], "▶")
+                render_sezione("REGIME DI MERCATO", ["REGIME"], "◈")
+
+                col_snap, col_strat = st.columns([1, 1])
+                with col_snap:
+                    render_sezione("SNAPSHOT INDICATORI", ["SNAPSHOT"], "◉")
+                with col_strat:
+                    render_sezione("STRATEGIA CONSIGLIATA", ["STRATEGIA"], "★")
+
+                render_sezione("RAGIONAMENTO ISTITUZIONALE", ["RAGIONAMENTO"], "◆")
+                render_sezione("ANALISI SCENARI", ["SCENARI"], "◐")
+
+                col_r, col_nt = st.columns([1, 1])
+                with col_r:
+                    render_sezione("RISCHI DA MONITORARE", ["RISCHI"], "⚠")
+                with col_nt:
+                    render_sezione("CONDIZIONE NO-TRADE", ["NO-TRADE", "NO TRADE"], "⊘")
+
+                # Timestamp analisi
+                st.markdown(f"""
+<div style="text-align:right;font-size:0.65rem;color:var(--text-muted);font-family:var(--font-mono);margin-top:0.5rem">
+  Analisi generata il {datetime.now().strftime('%d/%m/%Y %H:%M')} &middot; {adv_nome} ({adv_tk}) &middot; Spot: {fmt(adv_spot,2)}
+</div>""", unsafe_allow_html=True)
+        else:
+            st.markdown("""
+<div class="panel" style="text-align:center;padding:2.5rem;opacity:0.6;">
+  <div style="font-size:2rem;margin-bottom:0.75rem">&#9729;</div>
+  <div style="font-size:0.9rem;color:var(--text-secondary)">Inserisci la password e premi <strong>Avvia Strategy Advisor</strong> per ricevere l'analisi istituzionale completa con web search in tempo reale.</div>
+</div>
+""", unsafe_allow_html=True)
 st.markdown("""
 <div class="ph-footer">
     <span style="font-size:0.72rem;color:var(--text-secondary);font-weight:500">Phinance</span><br>
