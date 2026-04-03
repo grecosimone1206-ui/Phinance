@@ -346,87 +346,6 @@ div[data-testid="stHorizontalBlock"] .stButton > button:focus {
     transform: translateY(-2px);
 }
 .ph-tab:hover::after { opacity:1; }
-/* ── STRATEGY ADVISOR — Nuvoletta ── */
-.ph-advisor-wrap {
-    display: flex;
-    justify-content: center;
-    margin-top: 2.2rem;
-}
-
-.ph-advisor-cloud {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 260px;
-    padding: 0.85rem 2rem;
-    background: rgba(0, 194, 255, 0.06);
-    border: 1px solid rgba(0, 194, 255, 0.28);
-    border-radius: 50px;
-    cursor: pointer;
-    transition: all 0.28s ease;
-    animation: fade-up 1s cubic-bezier(.22,.68,0,1.2) 0.3s both;
-}
-
-/* bolle della nuvoletta */
-.ph-advisor-cloud::before,
-.ph-advisor-cloud::after {
-    content: '';
-    position: absolute;
-    background: rgba(0, 194, 255, 0.06);
-    border: 1px solid rgba(0, 194, 255, 0.22);
-    border-radius: 50%;
-    transition: all 0.28s ease;
-}
-.ph-advisor-cloud::before {
-    width: 36px; height: 36px;
-    bottom: -14px; left: 32px;
-}
-.ph-advisor-cloud::after {
-    width: 20px; height: 20px;
-    bottom: -24px; left: 20px;
-}
-
-.ph-advisor-cloud:hover {
-    background: rgba(0, 194, 255, 0.12);
-    border-color: rgba(0, 194, 255, 0.6);
-    box-shadow:
-        0 0 28px 6px rgba(0,194,255,0.18),
-        0 0 60px 15px rgba(0,194,255,0.08),
-        inset 0 0 20px rgba(0,194,255,0.07);
-    transform: translateY(-3px);
-}
-.ph-advisor-cloud:hover::before,
-.ph-advisor-cloud:hover::after {
-    border-color: rgba(0,194,255,0.45);
-    background: rgba(0,194,255,0.10);
-}
-
-.ph-advisor-icon {
-    font-size: 1.1rem;
-    margin-right: 0.7rem;
-    opacity: 0.85;
-}
-
-.ph-advisor-text {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: rgba(0, 194, 255, 0.88);
-    letter-spacing: 0.02em;
-}
-
-.ph-advisor-sub {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 400;
-    color: rgba(0, 194, 255, 0.5);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    display: block;
-    margin-top: 1px;
-}
-
 /* Separatore tra strategie e advisor */
 .ph-divider {
     display: flex;
@@ -447,31 +366,6 @@ div[data-testid="stHorizontalBlock"] .stButton > button:focus {
     color: rgba(255,255,255,0.2);
     letter-spacing: 0.15em;
     text-transform: uppercase;
-}
-
-/* Bottone Strategy Advisor — colonna centrale */
-div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"]:last-of-type .stButton > button {
-    min-width: 100% !important;
-    height: 64px !important;
-    border-radius: 50px !important;
-    border: 1px solid rgba(0,194,255,0.35) !important;
-    background: rgba(0,194,255,0.06) !important;
-    color: rgba(0,194,255,0.9) !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 1rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.02em !important;
-    transition: all 0.28s ease !important;
-    box-shadow: none !important;
-}
-div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"]:last-of-type .stButton > button:hover {
-    background: rgba(0,194,255,0.13) !important;
-    border-color: rgba(0,194,255,0.65) !important;
-    box-shadow:
-        0 0 28px 6px rgba(0,194,255,0.18),
-        0 0 60px 15px rgba(0,194,255,0.08) !important;
-    transform: translateY(-2px) !important;
-    color: #ffffff !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -511,34 +405,14 @@ div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"]:last-of-
             st.session_state.strategia = "long_put"
             st.rerun()
 
-    # ── Separatore + Nuvoletta Strategy Advisor ──
+    # ── Separatore + Strategy Advisor ──
     st.markdown("""
 <div class="ph-divider"><span class="ph-divider-label">AI Advisory</span></div>
-<div class="ph-advisor-wrap">
-  <div class="ph-advisor-cloud">
-    <span class="ph-advisor-icon">&#9729;</span>
-    <div>
-      <span class="ph-advisor-text">Strategy Advisor</span>
-      <span class="ph-advisor-sub">Analisi AI &middot; Web Search &middot; Istituzionale</span>
-    </div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-    # Bottone Streamlit per Strategy Advisor — con key unica e CSS scoped
-    st.markdown("""
-<style>
-div[data-testid="stVerticalBlock"] div[data-testid="stButton"]:has(button[kind="secondary"][data-testid="baseButton-secondary"]:last-of-type) > button { }
-/* Stile dedicato SOLO al bottone advisor tramite key */
-button[data-testid="baseButton-secondary"].advisor-btn {
-    opacity: 0 !important;
-}
-</style>
 """, unsafe_allow_html=True)
 
     col_adv_center = st.columns([1, 2, 1])
     with col_adv_center[1]:
-        if st.button("☁ Strategy Advisor", key="splash_advisor", use_container_width=True):
+        if st.button("Strategy Advisor", key="splash_advisor", use_container_width=True):
             st.session_state.strategia = "strategy_advisor"
             st.rerun()
 
