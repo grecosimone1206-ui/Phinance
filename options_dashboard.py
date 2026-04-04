@@ -3612,14 +3612,17 @@ if STRATEGIA in ("long_call", "long_put"):
     with st.sidebar:
         st.markdown(f"<div class='sb-section'>{tipo_label}</div>", unsafe_allow_html=True)
 
-        # Strike
+        # Strike — default = spot corrente
+        _spot_rounded = float(round(spot))
         if "slider_lo_strike" not in st.session_state:
-            st.session_state["slider_lo_strike"] = round(spot * (1.02 if is_call else 0.98))
+            st.session_state["slider_lo_strike"] = _spot_rounded
         if "input_lo_strike" not in st.session_state:
-            st.session_state["input_lo_strike"] = st.session_state["slider_lo_strike"]
-        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>STRIKE ($)</span>", unsafe_allow_html=True)
+            st.session_state["input_lo_strike"] = _spot_rounded
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>STRIKE</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
         _smin, _smax = float(round(spot*0.7)), float(round(spot*1.3))
+        _cur_strike = float(max(_smin, min(_smax, st.session_state["slider_lo_strike"])))
+        st.session_state["slider_lo_strike"] = _cur_strike
         with col_s:
             st.slider("lo_str_s", _smin, _smax, key="slider_lo_strike", step=1.0,
                 label_visibility="collapsed",
@@ -3638,7 +3641,7 @@ if STRATEGIA in ("long_call", "long_put"):
             st.session_state["slider_lo_prem"] = min(_prem_default, 100.0)
         if "input_lo_prem" not in st.session_state:
             st.session_state["input_lo_prem"] = _prem_default
-        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PREMIO PAGATO ($)</span>", unsafe_allow_html=True)
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PREMIO PAGATO</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
         with col_s:
             st.slider("lo_prem_s", 0.01, 100.0, key="slider_lo_prem", step=0.01,
@@ -3680,7 +3683,7 @@ if STRATEGIA in ("long_call", "long_put"):
   </div>
   <div class="kpi-card kpi-sm" style="animation-delay:0.12s">
     <div class="kpi-eyebrow">&#9679; P&amp;L attuale</div>
-    <div class="kpi-value {kpi_pnl_cls}">{kpi_pnl_pre}{fmt(lo_pnl_attuale,0)} $</div>
+    <div class="kpi-value {kpi_pnl_cls}">{kpi_pnl_pre}{fmt(lo_pnl_attuale,0)}</div>
     <div class="kpi-sub">Su {lo_contratti} contratt{'o' if lo_contratti==1 else 'i'}</div>
   </div>
   <div class="kpi-card kpi-sm" style="animation-delay:0.18s">
@@ -3690,7 +3693,7 @@ if STRATEGIA in ("long_call", "long_put"):
   </div>
   <div class="kpi-card kpi-sm" style="animation-delay:0.24s">
     <div class="kpi-eyebrow">&#9679; Max perdita</div>
-    <div class="kpi-value red">-{fmt(lo_max_loss,0)} $</div>
+    <div class="kpi-value red">-{fmt(lo_max_loss,0)}</div>
     <div class="kpi-sub">Premio totale pagato</div>
   </div>
 </div>
@@ -3810,13 +3813,13 @@ const chart=new Chart(ctx,{{
         title:ctx=>'SPY: '+ctx[0].label,
         label:ctx=>{{
           const v=ctx.dataset.data[ctx.dataIndex];
-          return ctx.dataset.label+': '+(v>=0?'+':'')+'$'+Math.round(v);
+          return ctx.dataset.label+': '+(v>=0?'+':'')+Math.round(v)+' €';
         }}
       }}}}
     }},
     scales:{{
       x:{{ticks:{{autoSkip:true,maxTicksLimit:11,color:'#8B9FC0',font:{{size:10}}}},grid:{{color:'rgba(136,135,128,0.12)'}}}},
-      y:{{ticks:{{color:'#8B9FC0',font:{{size:10}},callback:v=>(v>=0?'+':'')+'$'+Math.round(v)}},grid:{{color:'rgba(136,135,128,0.12)'}}}}
+      y:{{ticks:{{color:'#8B9FC0',font:{{size:10}},callback:v=>(v>=0?'+':'')+Math.round(v)+' €'}},grid:{{color:'rgba(136,135,128,0.12)'}}}}
     }}
   }}
 }});
@@ -3845,13 +3848,13 @@ function update(){{
   const theta=bsTheta(SPOT,STRIKE,T,R,iv)*100*CONTRATTI;
 
   const el=document.getElementById('pnlSpot');
-  el.textContent=(pnl>=0?'+':'')+'$'+Math.round(pnl);
+  el.textContent=(pnl>=0?'+':'')+Math.round(pnl)+' €';
   el.style.color=pnl>=0?'#00E5A0':'#FF5A5A';
-  document.getElementById('valOpt').textContent='$'+val.toFixed(2);
+  document.getElementById('valOpt').textContent=val.toFixed(2);
   const em=document.getElementById('moltip');
   em.textContent=molt.toFixed(2)+'x';
   em.style.color=molt>=1?'#00E5A0':'#FF5A5A';
-  document.getElementById('thetaV').textContent='$'+theta.toFixed(2)+'/gg';
+  document.getElementById('thetaV').textContent=theta.toFixed(2)+' €/gg';
 
   buildTable(dte,iv);
 }}
@@ -3873,7 +3876,7 @@ function buildTable(dte,baseIV){{
       const pnl=(val-PREMIO)*100*CONTRATTI;
       const bg=pnl>0?`rgba(0,229,160,${{Math.min(pnl/1000,0.3)}})`:`rgba(255,90,90,${{Math.min(Math.abs(pnl)/1000,0.3)}})`;
       const col=pnl>0?'#00E5A0':'#FF5A5A';
-      h+=`<td style="padding:2px 6px;text-align:right;background:${{bg}};color:${{col}};font-weight:500;">${{pnl>=0?'+':''}}${{Math.round(pnl)}}</td>`;
+      h+=`<td style="padding:2px 6px;text-align:right;background:${{bg}};color:${{col}};font-weight:500;">${{pnl>=0?'+':''}}${{Math.round(pnl)}} €</td>`;
     }});
     h+='</tr>';
   }});
@@ -3897,7 +3900,7 @@ update();
     <div class="tip-box-static"><span class="label">Spot</span><span class="val">{fmt(spot,2)}</span></div>
     <div class="tip-box-static"><span class="label">Strike</span><span class="val">{fmt(lo_strike,2)}</span></div>
     <div class="tip-box-static"><span class="label">DTE</span><span class="val">{lo_dte} gg</span></div>
-    <div class="tip-box-static"><span class="label">Premio pagato</span><span class="val">{fmt(lo_premio,2)} $ ({fmt(lo_premio*100,2)} € / contratto)</span></div>
+    <div class="tip-box-static"><span class="label">Premio pagato</span><span class="val">{fmt(lo_premio,2)} ({fmt(lo_premio*100,2)} € / contratto)</span></div>
     <div class="tip-box-static"><span class="label">Contratti</span><span class="val">{lo_contratti}</span></div>
     <div class="tip-box-static"><span class="label">Costo totale</span><span class="val">{fmt(lo_premio*100*lo_contratti,2)} €</span></div>
     <div class="tip-box-static"><span class="label">Break-even</span><span class="val">{fmt(lo_be,2)}</span></div>
