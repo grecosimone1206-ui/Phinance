@@ -719,6 +719,7 @@ hr { border-color: var(--border-subtle) !important; }
 .kpi-card.kpi-sm .tip-box {
     font-size: 0.62rem !important;
 }
+.kpi-card.kpi-sm .kpi-badge {
     font-size: 0.46rem !important;
     padding: 2px 6px !important;
     white-space: nowrap !important;
@@ -801,6 +802,14 @@ hr { border-color: var(--border-subtle) !important; }
 .kpi-badge.green { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid rgba(0,229,160,0.2); }
 .kpi-badge.gold  { background: var(--accent-gold-dim);  color: var(--accent-gold);  border: 1px solid rgba(255,181,71,0.2); }
 .kpi-badge.red   { background: var(--accent-red-dim);   color: var(--accent-red);   border: 1px solid rgba(255,90,90,0.2); }
+
+/* ── KPI GRID ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
 
 /* ── PANELS ── */
 .panel {
@@ -2244,7 +2253,13 @@ def genera_pdf_scenari(strategia, params):
 
 with st.sidebar:
     # Pulsante cambia strategia
-    strat_label = "&#9679; Put Scoperta" if STRATEGIA == "put_scoperta" else "&#9670; Bull Put Spread"
+    _strat_labels = {
+        "put_scoperta":    "&#9679; Put Scoperta",
+        "bull_put_spread": "&#9670; Bull Put Spread",
+        "long_call":       "&#9650; Long Call",
+        "long_put":        "&#9660; Long Put",
+    }
+    strat_label = _strat_labels.get(STRATEGIA, STRATEGIA)
     st.markdown(f"<div style='font-family:var(--font-mono);font-size:0.58rem;color:var(--text-muted);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.4rem'>Strategia attiva</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-family:var(--font-body);font-size:0.9rem;font-weight:600;color:var(--accent-cyan);margin-bottom:0.6rem'>{strat_label}</div>", unsafe_allow_html=True)
     if st.button("&#8635; Cambia strategia", use_container_width=True):
@@ -2305,20 +2320,21 @@ with st.sidebar:
     st.session_state["_iv_pct_init"] = float(st.session_state["slider_iv"])
     iv_pct = float(st.session_state["slider_iv"])
 
-    # ── IV RANK ──
+    # ── IV RANK (solo Put Scoperta / Bull Put Spread) ──
     if "slider_ivr" not in st.session_state: st.session_state["slider_ivr"] = 50.0
     if "input_ivr" not in st.session_state: st.session_state["input_ivr"] = st.session_state["slider_ivr"]
-    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK (0–100)</span>", unsafe_allow_html=True)
-    col_s, col_n = st.columns([2,1])
-    with col_s:
-        st.slider("ivr_s", 0.0, 100.0, step=0.5, key="slider_ivr",
-            label_visibility="collapsed",
-            on_change=lambda: st.session_state.update({"input_ivr": st.session_state["slider_ivr"]}),
-            help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere.")
-    with col_n:
-        st.number_input("ivr_n", 0.0, 100.0, step=0.5, format="%.2f", key="input_ivr",
-            label_visibility="collapsed",
-            on_change=lambda: st.session_state.update({"slider_ivr": float(st.session_state["input_ivr"])}))
+    if STRATEGIA not in ("long_call", "long_put"):
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK (0–100)</span>", unsafe_allow_html=True)
+        col_s, col_n = st.columns([2,1])
+        with col_s:
+            st.slider("ivr_s", 0.0, 100.0, step=0.5, key="slider_ivr",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"input_ivr": st.session_state["slider_ivr"]}),
+                help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere.")
+        with col_n:
+            st.number_input("ivr_n", 0.0, 100.0, step=0.5, format="%.2f", key="input_ivr",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"slider_ivr": float(st.session_state["input_ivr"])}))
     iv_rank_reale = float(st.session_state["slider_ivr"])
 
     r_pct = 4.5
@@ -2361,22 +2377,22 @@ with st.sidebar:
         marg_pct = 15.0
     crash = 20.0
 
-    st.markdown("<div class='sb-section'>Obiettivo Strategia</div>", unsafe_allow_html=True)
-
-    # ── PROBABILITÀ DI SUCCESSO ──
+    # ── OBIETTIVO STRATEGIA (solo Put Scoperta / Bull Put Spread) ──
     if "slider_pt" not in st.session_state: st.session_state["slider_pt"] = 84.0
     if "input_pt" not in st.session_state: st.session_state["input_pt"] = st.session_state["slider_pt"]
-    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PROBABILITÀ DI SUCCESSO (%)</span>", unsafe_allow_html=True)
-    col_s, col_n = st.columns([2,1])
-    with col_s:
-        st.slider("pt_s", 70.0, 99.0, step=1.0, key="slider_pt",
-            label_visibility="collapsed",
-            on_change=lambda: st.session_state.update({"input_pt": st.session_state["slider_pt"]}),
-            help="84% = Delta 0.16 — ottimale.\n90% = Delta 0.10 — conservativo.\n80% = Delta 0.20 — aggressivo.")
-    with col_n:
-        st.number_input("pt_n", 70.0, 99.0, step=1.0, format="%.2f", key="input_pt",
-            label_visibility="collapsed",
-            on_change=lambda: st.session_state.update({"slider_pt": float(st.session_state["input_pt"])}))
+    if STRATEGIA not in ("long_call", "long_put"):
+        st.markdown("<div class='sb-section'>Obiettivo Strategia</div>", unsafe_allow_html=True)
+        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PROBABILITÀ DI SUCCESSO (%)</span>", unsafe_allow_html=True)
+        col_s, col_n = st.columns([2,1])
+        with col_s:
+            st.slider("pt_s", 70.0, 99.0, step=1.0, key="slider_pt",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"input_pt": st.session_state["slider_pt"]}),
+                help="84% = Delta 0.16 — ottimale.\n90% = Delta 0.10 — conservativo.\n80% = Delta 0.20 — aggressivo.")
+        with col_n:
+            st.number_input("pt_n", 70.0, 99.0, step=1.0, format="%.2f", key="input_pt",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"slider_pt": float(st.session_state["input_pt"])}))
     prob_t = float(st.session_state["slider_pt"])
 
     # Parametri specifici Bull Put Spread
@@ -2502,63 +2518,69 @@ with st.sidebar:
         premio_reale = None
 
 
-    # ── PULSANTE GENERA PDF ──────────────────────────────────────────────────
-    st.markdown("<div class='sb-section'>Analisi Scenari</div>", unsafe_allow_html=True)
-    genera_pdf_btn = st.button("Genera Report Scenari",
-        use_container_width=True,
-        help=f"Genera un PDF scaricabile con l'analisi completa della posizione su una fascia -10%/+10% dallo spot, "
-             f"30 livelli di prezzo con valore delle opzioni e P&L calcolato con T residuo = {max(int(st.session_state.get('slider_dte', 45) / 2), 1)} giorni.")
-    if "pdf_scenari_bytes" in st.session_state and st.session_state["pdf_scenari_bytes"]:
-        st.download_button(
-            label="Scarica Report Scenari",
-            data=st.session_state["pdf_scenari_bytes"],
-            file_name=st.session_state.get("pdf_scenari_fname", "report.pdf"),
-            mime="application/pdf",
+    # ── PULSANTE GENERA PDF (solo Put Scoperta / Bull Put Spread) ──────────────
+    if STRATEGIA not in ("long_call", "long_put"):
+        st.markdown("<div class='sb-section'>Analisi Scenari</div>", unsafe_allow_html=True)
+        genera_pdf_btn = st.button("Genera Report Scenari",
             use_container_width=True,
-        )
-
-    st.markdown("<div class='sb-section'>Analisi AI</div>", unsafe_allow_html=True)
-
-    # ── Password AI ──
-    import os as _os
-    AI_PWD = _os.environ.get("AI_PASSWORD", "")
-    if "ai_sbloccato" not in st.session_state:
-        st.session_state["ai_sbloccato"] = False
-
-    if not st.session_state["ai_sbloccato"]:
-        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PASSWORD</span>", unsafe_allow_html=True)
-        pwd_input = st.text_input("pwd", type="password",
-            label_visibility="collapsed",
-            placeholder="Inserisci password…",
-            key="ai_pwd_input")
-        if pwd_input:
-            if pwd_input == AI_PWD:
-                st.session_state["ai_sbloccato"] = True
-                st.rerun()
-            else:
-                st.error("Password errata.")
-        genera_ai_btn = st.button("🔒 Genera Report AI",
-            use_container_width=True, disabled=True)
+            help=f"Genera un PDF scaricabile con l'analisi completa della posizione su una fascia -10%/+10% dallo spot, "
+                 f"30 livelli di prezzo con valore delle opzioni e P&L calcolato con T residuo = {max(int(st.session_state.get('slider_dte', 45) / 2), 1)} giorni.")
+        if "pdf_scenari_bytes" in st.session_state and st.session_state["pdf_scenari_bytes"]:
+            st.download_button(
+                label="Scarica Report Scenari",
+                data=st.session_state["pdf_scenari_bytes"],
+                file_name=st.session_state.get("pdf_scenari_fname", "report.pdf"),
+                mime="application/pdf",
+                use_container_width=True,
+            )
     else:
-        col_ai, col_lock = st.columns([4, 1])
-        with col_lock:
-            if st.button("🔓", help="Blocca Report AI", use_container_width=True):
-                st.session_state["ai_sbloccato"] = False
-                st.session_state["ai_pwd_input"] = ""
-                st.rerun()
-        genera_ai_btn = st.button("Genera Report AI",
-            use_container_width=True,
-            help="Invia i parametri della posizione a Claude per un'analisi professionale del sottostante, "
-                 "della volatilità e della solidità del trade.")
+        genera_pdf_btn = False
 
-    if "pdf_ai_bytes" in st.session_state and st.session_state["pdf_ai_bytes"]:
-        st.download_button(
-            label="Scarica Report AI",
-            data=st.session_state["pdf_ai_bytes"],
-            file_name=st.session_state.get("pdf_ai_fname", "report_ai.pdf"),
-            mime="application/pdf",
-            use_container_width=True,
-        )
+    # ── Analisi AI (solo Put Scoperta / Bull Put Spread) ──
+    if STRATEGIA not in ("long_call", "long_put"):
+        st.markdown("<div class='sb-section'>Analisi AI</div>", unsafe_allow_html=True)
+
+        import os as _os
+        AI_PWD = _os.environ.get("AI_PASSWORD", "")
+        if "ai_sbloccato" not in st.session_state:
+            st.session_state["ai_sbloccato"] = False
+
+        if not st.session_state["ai_sbloccato"]:
+            st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PASSWORD</span>", unsafe_allow_html=True)
+            pwd_input = st.text_input("pwd", type="password",
+                label_visibility="collapsed",
+                placeholder="Inserisci password…",
+                key="ai_pwd_input")
+            if pwd_input:
+                if pwd_input == AI_PWD:
+                    st.session_state["ai_sbloccato"] = True
+                    st.rerun()
+                else:
+                    st.error("Password errata.")
+            genera_ai_btn = st.button("🔒 Genera Report AI",
+                use_container_width=True, disabled=True)
+        else:
+            col_ai, col_lock = st.columns([4, 1])
+            with col_lock:
+                if st.button("🔓", help="Blocca Report AI", use_container_width=True):
+                    st.session_state["ai_sbloccato"] = False
+                    st.session_state["ai_pwd_input"] = ""
+                    st.rerun()
+            genera_ai_btn = st.button("Genera Report AI",
+                use_container_width=True,
+                help="Invia i parametri della posizione a Claude per un'analisi professionale del sottostante, "
+                     "della volatilità e della solidità del trade.")
+
+        if "pdf_ai_bytes" in st.session_state and st.session_state["pdf_ai_bytes"]:
+            st.download_button(
+                label="Scarica Report AI",
+                data=st.session_state["pdf_ai_bytes"],
+                file_name=st.session_state.get("pdf_ai_fname", "report_ai.pdf"),
+                mime="application/pdf",
+                use_container_width=True,
+            )
+    else:
+        genera_ai_btn = False
 
 
 # ═══════════════════════════════════════════════════════════
