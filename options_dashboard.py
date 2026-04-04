@@ -2730,8 +2730,20 @@ if genera_ai_btn:
 # ═══════════════════════════════════════════════════════════
 
 # ── HEADER ──
-strat_header_label = "Vendita Put Scoperta" if STRATEGIA == "put_scoperta" else "Bull Put Spread"
-strat_header_icon  = "&#9679;" if STRATEGIA == "put_scoperta" else "&#9670;"
+strat_header_label = {
+    "put_scoperta":    "Vendita Put Scoperta",
+    "bull_put_spread": "Bull Put Spread",
+    "long_call":       "Long Call",
+    "long_put":        "Long Put",
+    "strategy_advisor":"Strategy Advisor",
+}.get(STRATEGIA, STRATEGIA)
+strat_header_icon = {
+    "put_scoperta":    "&#9679;",
+    "bull_put_spread": "&#9670;",
+    "long_call":       "&#9650;",
+    "long_put":        "&#9660;",
+    "strategy_advisor":"&#9729;",
+}.get(STRATEGIA, "&#9679;")
 st.markdown(f"""
 <div class="ph-header">
     <div style="display:flex;align-items:center;gap:1.2rem">
@@ -3559,298 +3571,300 @@ elif STRATEGIA == "bull_put_spread":
 # LONG CALL / LONG PUT — DASHBOARD
 # ══════════════════════════════════════════════════════════════
 if STRATEGIA in ("long_call", "long_put"):
-    is_call = STRATEGIA == "long_call"
+    is_call    = STRATEGIA == "long_call"
     tipo_label = "Long Call" if is_call else "Long Put"
-    tipo_emoji = "📈" if is_call else "📉"
 
     import scipy.stats as _si2
 
-    def bs_option(S, K, T, r, sigma, is_call_flag):
-        if T <= 0:
-            return max(S - K, 0) if is_call_flag else max(K - S, 0)
+    def bs_option(S, K, T, r, sigma, flag):
+        if T <= 0.0001:
+            return max(S-K, 0) if flag else max(K-S, 0)
         d1 = (np.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*np.sqrt(T))
         d2 = d1 - sigma*np.sqrt(T)
-        if is_call_flag:
-            return S*_si2.norm.cdf(d1) - K*np.exp(-r*T)*_si2.norm.cdf(d2)
+        if flag:
+            return float(S*_si2.norm.cdf(d1) - K*np.exp(-r*T)*_si2.norm.cdf(d2))
         else:
-            return K*np.exp(-r*T)*_si2.norm.cdf(-d2) - S*_si2.norm.cdf(-d1)
+            return float(K*np.exp(-r*T)*_si2.norm.cdf(-d2) - S*_si2.norm.cdf(-d1))
 
-    # ── Parametri sidebar long option ──
+    # ── Sidebar ──
     with st.sidebar:
         st.markdown(f"<div class='sb-section'>{tipo_label}</div>", unsafe_allow_html=True)
 
         # Strike
-        if "lo_strike" not in st.session_state: st.session_state["lo_strike"] = round(spot * 1.02 if is_call else spot * 0.98, 0)
-        if "lo_strike_n" not in st.session_state: st.session_state["lo_strike_n"] = st.session_state["lo_strike"]
+        if "slider_lo_strike" not in st.session_state:
+            st.session_state["slider_lo_strike"] = round(spot * (1.02 if is_call else 0.98))
+        if "input_lo_strike" not in st.session_state:
+            st.session_state["input_lo_strike"] = st.session_state["slider_lo_strike"]
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>STRIKE ($)</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
+        _smin, _smax = float(round(spot*0.7)), float(round(spot*1.3))
         with col_s:
-            st.slider("lo_strike_s", float(spot*0.7), float(spot*1.3), float(st.session_state["lo_strike"]), 1.0,
-                key="lo_strike_sl", label_visibility="collapsed",
-                on_change=lambda: st.session_state.update({"lo_strike": st.session_state["lo_strike_sl"], "lo_strike_n": st.session_state["lo_strike_sl"]}))
+            st.slider("lo_str_s", _smin, _smax, key="slider_lo_strike", step=1.0,
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"input_lo_strike": st.session_state["slider_lo_strike"]}))
         with col_n:
-            st.number_input("lo_strike_ni", float(spot*0.7), float(spot*1.3), float(st.session_state["lo_strike_n"]), 1.0,
-                key="lo_strike_n", label_visibility="collapsed", format="%.0f",
-                on_change=lambda: st.session_state.update({"lo_strike": st.session_state["lo_strike_n"], "lo_strike_sl": st.session_state["lo_strike_n"]}))
-        lo_strike = float(st.session_state["lo_strike"])
+            st.number_input("lo_str_n", _smin, _smax, key="input_lo_strike", step=1.0, format="%.0f",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"slider_lo_strike": st.session_state["input_lo_strike"]}))
+        lo_strike = float(st.session_state["slider_lo_strike"])
 
-        # DTE già nella sidebar globale — riuso
-        lo_dte = dte
+        lo_dte = dte  # riusa DTE dalla sidebar globale
 
         # Premio pagato
+        _prem_default = round(bs_option(spot, lo_strike, lo_dte/365, 0.04, iv_pct/100, is_call), 2)
+        if "slider_lo_prem" not in st.session_state:
+            st.session_state["slider_lo_prem"] = min(_prem_default, 100.0)
+        if "input_lo_prem" not in st.session_state:
+            st.session_state["input_lo_prem"] = _prem_default
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PREMIO PAGATO ($)</span>", unsafe_allow_html=True)
-        if "lo_premio" not in st.session_state: st.session_state["lo_premio"] = round(bs_option(spot, lo_strike, lo_dte/365, 0.04, iv_pct/100, is_call), 2)
-        if "lo_premio_n" not in st.session_state: st.session_state["lo_premio_n"] = st.session_state["lo_premio"]
         col_s, col_n = st.columns([2,1])
         with col_s:
-            st.slider("lo_prem_s", 0.01, 100.0, float(min(st.session_state["lo_premio"], 100.0)), 0.01,
-                key="lo_prem_sl", label_visibility="collapsed",
-                on_change=lambda: st.session_state.update({"lo_premio": st.session_state["lo_prem_sl"], "lo_premio_n": st.session_state["lo_prem_sl"]}))
+            st.slider("lo_prem_s", 0.01, 100.0, key="slider_lo_prem", step=0.01,
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"input_lo_prem": st.session_state["slider_lo_prem"]}))
         with col_n:
-            st.number_input("lo_prem_ni", 0.01, 500.0, float(st.session_state["lo_premio_n"]), 0.01,
-                key="lo_premio_n", label_visibility="collapsed", format="%.2f",
-                on_change=lambda: st.session_state.update({"lo_premio": st.session_state["lo_premio_n"], "lo_prem_sl": min(st.session_state["lo_premio_n"], 100.0)}))
-        lo_premio = float(st.session_state["lo_premio"])
-
-        # Numero contratti
+            st.number_input("lo_prem_n", 0.01, 500.0, key="input_lo_prem", step=0.01, format="%.2f",
+                label_visibility="collapsed",
+                on_change=lambda: st.session_state.update({"slider_lo_prem": min(float(st.session_state["input_lo_prem"]), 100.0)}))
+        lo_premio    = float(st.session_state["input_lo_prem"])
         lo_contratti = n_contratti
 
         st.markdown("<div class='sb-section'>Analisi Scenari</div>", unsafe_allow_html=True)
         lo_pdf_btn = st.button("Genera Report Scenari", use_container_width=True)
 
     # ── Calcoli base ──
-    lo_sigma = iv_pct / 100
-    lo_T = lo_dte / 365
-    lo_r = 0.04
+    lo_sigma       = iv_pct / 100
+    lo_T           = lo_dte / 365
+    lo_r           = 0.04
     lo_val_attuale = bs_option(spot, lo_strike, lo_T, lo_r, lo_sigma, is_call)
     lo_pnl_attuale = (lo_val_attuale - lo_premio) * 100 * lo_contratti
-    lo_be = lo_strike + lo_premio if is_call else lo_strike - lo_premio
-    lo_max_loss = lo_premio * 100 * lo_contratti
+    lo_be          = lo_strike + lo_premio if is_call else lo_strike - lo_premio
+    lo_max_loss    = lo_premio * 100 * lo_contratti
 
-    # ── KPI Cards ──
+    # ── KPI Cards (5 compatte, stesso stile PS/BPS) ──
     kpi_pnl_cls = "green" if lo_pnl_attuale >= 0 else "red"
-    kpi_pnl_str = f"+{fmt(lo_pnl_attuale,2)}" if lo_pnl_attuale >= 0 else fmt(lo_pnl_attuale,2)
+    kpi_pnl_pre = "+" if lo_pnl_attuale >= 0 else ""
     st.markdown(f"""
 <div class="kpi-grid">
-  <div class="kpi-card kpi-sm">
+  <div class="kpi-card kpi-sm" style="animation-delay:0s">
     <div class="kpi-eyebrow">&#9679; Spot</div>
     <div class="kpi-value cyan">{fmt(spot,2)}</div>
-    <div class="kpi-sub">{'Variazione oggi' if var else ''}<br>{f'+{fmt(var,2)}%' if var and var>=0 else fmt(var,2)+'%' if var else 'N/D'}</div>
+    <div class="kpi-sub">Var. oggi<br><span style="color:var(--{'accent-green' if var>=0 else 'accent-red'})">{var:+.2f}%</span></div>
   </div>
-  <div class="kpi-card kpi-sm">
-    <div class="kpi-eyebrow">&#9679; Valore BS attuale</div>
-    <div class="kpi-value cyan">{fmt(lo_val_attuale,4)}</div>
+  <div class="kpi-card kpi-sm" style="animation-delay:0.06s">
+    <div class="kpi-eyebrow">&#9679; Valore BS</div>
+    <div class="kpi-value cyan">{fmt(lo_val_attuale,2)}</div>
     <div class="kpi-sub">Premio pagato<br>{fmt(lo_premio,2)}</div>
   </div>
-  <div class="kpi-card kpi-sm">
+  <div class="kpi-card kpi-sm" style="animation-delay:0.12s">
     <div class="kpi-eyebrow">&#9679; P&amp;L attuale</div>
-    <div class="kpi-value {kpi_pnl_cls}">{kpi_pnl_str} €</div>
+    <div class="kpi-value {kpi_pnl_cls}">{kpi_pnl_pre}{fmt(lo_pnl_attuale,0)} $</div>
     <div class="kpi-sub">Su {lo_contratti} contratt{'o' if lo_contratti==1 else 'i'}</div>
   </div>
-  <div class="kpi-card kpi-sm">
+  <div class="kpi-card kpi-sm" style="animation-delay:0.18s">
     <div class="kpi-eyebrow">&#9679; Break-even</div>
     <div class="kpi-value gold">{fmt(lo_be,2)}</div>
-    <div class="kpi-sub">Strike {'+ premio' if is_call else '- premio'}</div>
+    <div class="kpi-sub">Strike {'+ premio' if is_call else '&minus; premio'}</div>
   </div>
-  <div class="kpi-card kpi-sm">
+  <div class="kpi-card kpi-sm" style="animation-delay:0.24s">
     <div class="kpi-eyebrow">&#9679; Max perdita</div>
-    <div class="kpi-value red">-{fmt(lo_max_loss,2)} €</div>
-    <div class="kpi-sub">Premio pagato totale</div>
+    <div class="kpi-value red">-{fmt(lo_max_loss,0)} $</div>
+    <div class="kpi-sub">Premio totale pagato</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Grafico P&L dinamico con slider DTE e IV ──
-    st.markdown(f"<div class='section-title'>Simulatore P&amp;L — {tipo_label}</div>", unsafe_allow_html=True)
-
-    prices_lo = [round(spot * (1 + p/100), 2) for p in range(-20, 21)]
+    # ── Grafico P&L dinamico ──
+    st.markdown(f"<div class='section-title'>Simulatore P&amp;L &mdash; {tipo_label}</div>", unsafe_allow_html=True)
 
     lo_chart_html = f"""
-<div style="font-family:var(--bs-body-font-family, sans-serif); padding: 0.5rem 0;">
-
-  <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
-    <div style="flex:1; min-width:200px;">
-      <label style="font-size:0.65rem; color:#8B9FC0; letter-spacing:0.1em; font-family:monospace;">DTE RESIDUI</label>
-      <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+<div style="padding:0.5rem 0;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+    <div>
+      <label style="font-size:0.62rem;color:#8B9FC0;letter-spacing:0.1em;font-family:monospace;display:block;margin-bottom:4px;">DTE RESIDUI</label>
+      <div style="display:flex;align-items:center;gap:8px;">
         <input type="range" id="dteR" min="0" max="{lo_dte}" value="{lo_dte}" step="1" style="flex:1;">
-        <span id="dteRval" style="font-size:1rem; font-weight:600; min-width:40px; text-align:right; color:#E8EDF5;">{lo_dte}</span>
-        <span style="font-size:0.7rem; color:#8B9FC0;">gg</span>
+        <span id="dteRval" style="font-size:1rem;font-weight:600;min-width:32px;text-align:right;color:#E8EDF5;">{lo_dte}</span>
+        <span style="font-size:0.68rem;color:#8B9FC0;">gg</span>
       </div>
     </div>
-    <div style="flex:1; min-width:200px;">
-      <label style="font-size:0.65rem; color:#8B9FC0; letter-spacing:0.1em; font-family:monospace;">IV FUTURA (%)</label>
-      <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-        <input type="range" id="ivR" min="5" max="80" value="{iv_pct:.1f}" step="0.5" style="flex:1;">
-        <span id="ivRval" style="font-size:1rem; font-weight:600; min-width:40px; text-align:right; color:#E8EDF5;">{iv_pct:.1f}</span>
-        <span style="font-size:0.7rem; color:#8B9FC0;">%</span>
+    <div>
+      <label style="font-size:0.62rem;color:#8B9FC0;letter-spacing:0.1em;font-family:monospace;display:block;margin-bottom:4px;">IV FUTURA (%)</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="range" id="ivR" min="5" max="80" value="{iv_pct:.0f}" step="1" style="flex:1;">
+        <span id="ivRval" style="font-size:1rem;font-weight:600;min-width:32px;text-align:right;color:#E8EDF5;">{iv_pct:.0f}</span>
+        <span style="font-size:0.68rem;color:#8B9FC0;">%</span>
       </div>
     </div>
   </div>
 
-  <div style="display:flex; gap:1rem; margin-bottom:0.75rem; flex-wrap:wrap;">
-    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
-      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">P&L ALLO SPOT</div>
-      <div id="pnlSpot" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:0.75rem;">
+    <div style="background:#0F1E2E;border-radius:8px;padding:0.5rem 0.75rem;text-align:center;">
+      <div style="font-size:0.58rem;color:#8B9FC0;font-family:monospace;letter-spacing:0.08em;">P&L ALLO SPOT</div>
+      <div id="pnlSpot" style="font-size:1rem;font-weight:600;margin-top:2px;color:#E8EDF5;">—</div>
     </div>
-    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
-      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">VALORE OPZIONE</div>
-      <div id="valOpt" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+    <div style="background:#0F1E2E;border-radius:8px;padding:0.5rem 0.75rem;text-align:center;">
+      <div style="font-size:0.58rem;color:#8B9FC0;font-family:monospace;letter-spacing:0.08em;">VALORE OPZIONE</div>
+      <div id="valOpt" style="font-size:1rem;font-weight:600;margin-top:2px;color:#E8EDF5;">—</div>
     </div>
-    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
-      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">MOLTIPLICATORE</div>
-      <div id="moltip" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+    <div style="background:#0F1E2E;border-radius:8px;padding:0.5rem 0.75rem;text-align:center;">
+      <div style="font-size:0.58rem;color:#8B9FC0;font-family:monospace;letter-spacing:0.08em;">MOLTIPLICATORE</div>
+      <div id="moltip" style="font-size:1rem;font-weight:600;margin-top:2px;color:#E8EDF5;">—</div>
     </div>
-    <div style="background:#0F1E2E; border-radius:8px; padding:0.6rem 1rem; flex:1; min-width:120px; text-align:center;">
-      <div style="font-size:0.6rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.1em;">THETA DECAY</div>
-      <div id="thetaV" style="font-size:1.1rem; font-weight:600; margin-top:2px;">—</div>
+    <div style="background:#0F1E2E;border-radius:8px;padding:0.5rem 0.75rem;text-align:center;">
+      <div style="font-size:0.58rem;color:#8B9FC0;font-family:monospace;letter-spacing:0.08em;">THETA/GG</div>
+      <div id="thetaV" style="font-size:1rem;font-weight:600;margin-top:2px;color:#FF5A5A;">—</div>
     </div>
   </div>
 
-  <canvas id="loChart" style="width:100%; height:300px;"></canvas>
+  <div style="position:relative;width:100%;height:280px;">
+    <canvas id="loChart"></canvas>
+  </div>
 
-  <!-- TABELLA SCENARI -->
-  <div style="margin-top:1.5rem;">
-    <div style="font-size:0.65rem; color:#8B9FC0; font-family:monospace; letter-spacing:0.12em; margin-bottom:0.5rem;">TABELLA SCENARI — P&L PER PREZZO × IV</div>
+  <div style="margin-top:1.25rem;">
+    <div style="font-size:0.58rem;color:#8B9FC0;font-family:monospace;letter-spacing:0.1em;margin-bottom:0.4rem;">TABELLA SCENARI — P&L PER PREZZO × IV</div>
     <div style="overflow-x:auto;">
-      <table id="scenTable" style="width:100%; border-collapse:collapse; font-size:0.72rem; font-family:monospace;"></table>
+      <table id="scenTable" style="width:100%;border-collapse:collapse;font-size:0.7rem;font-family:monospace;"></table>
     </div>
   </div>
-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const IS_CALL  = {'true' if is_call else 'false'};
-const SPOT     = {spot};
-const STRIKE   = {lo_strike};
-const PREMIO   = {lo_premio};
-const CONTRATTI= {lo_contratti};
-const TOTAL_DTE= {lo_dte};
-const R        = 0.04;
+const IS_CALL   = {'true' if is_call else 'false'};
+const SPOT      = {spot:.4f};
+const STRIKE    = {lo_strike:.2f};
+const PREMIO    = {lo_premio:.4f};
+const CONTRATTI = {lo_contratti};
+const TOTAL_DTE = {lo_dte};
+const R         = 0.04;
 
-function normCDF(x) {{
+function normCDF(x){{
   const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
-  const sign = x<0?-1:1;
-  const t = 1/(1+p*Math.abs(x));
-  const y = 1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x/2);
+  const sign=x<0?-1:1;
+  const t=1/(1+p*Math.abs(x));
+  const y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x/2);
   return 0.5*(1+sign*y);
 }}
 
-function bsOption(S, K, T, r, sigma) {{
-  if(T <= 0.0001) return IS_CALL ? Math.max(S-K,0) : Math.max(K-S,0);
-  const d1 = (Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
-  const d2 = d1-sigma*Math.sqrt(T);
+function bsOpt(S,K,T,r,sig){{
+  if(T<=0.0001) return IS_CALL?Math.max(S-K,0):Math.max(K-S,0);
+  const d1=(Math.log(S/K)+(r+0.5*sig*sig)*T)/(sig*Math.sqrt(T));
+  const d2=d1-sig*Math.sqrt(T);
   if(IS_CALL) return S*normCDF(d1)-K*Math.exp(-r*T)*normCDF(d2);
-  else        return K*Math.exp(-r*T)*normCDF(-d2)-S*normCDF(-d1);
+  return K*Math.exp(-r*T)*normCDF(-d2)-S*normCDF(-d1);
 }}
 
-function bsTheta(S, K, T, r, sigma) {{
-  if(T <= 0.0001) return 0;
-  const d1=(Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
-  const d2=d1-sigma*Math.sqrt(T);
+function bsTheta(S,K,T,r,sig){{
+  if(T<=0.0001) return 0;
+  const d1=(Math.log(S/K)+(r+0.5*sig*sig)*T)/(sig*Math.sqrt(T));
+  const d2=d1-sig*Math.sqrt(T);
   const nd1=Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI);
-  if(IS_CALL) return (-S*nd1*sigma/(2*Math.sqrt(T))-r*K*Math.exp(-r*T)*normCDF(d2))/365;
-  else        return (-S*nd1*sigma/(2*Math.sqrt(T))+r*K*Math.exp(-r*T)*normCDF(-d2))/365;
+  if(IS_CALL) return (-S*nd1*sig/(2*Math.sqrt(T))-r*K*Math.exp(-r*T)*normCDF(d2))/365;
+  return (-S*nd1*sig/(2*Math.sqrt(T))+r*K*Math.exp(-r*T)*normCDF(-d2))/365;
 }}
 
-const prices = [];
-for(let p=-20; p<=20; p++) prices.push(+(SPOT*(1+p/100)).toFixed(2));
+// Prezzi asse X: ±20% in step 1%
+const prices=[];
+for(let p=-20;p<=20;p++) prices.push(+(SPOT*(1+p/100)).toFixed(2));
 
-const chart = new Chart(document.getElementById('loChart'), {{
+const ctx=document.getElementById('loChart');
+const chart=new Chart(ctx,{{
   type:'line',
   data:{{
-    labels: prices.map(p=>'$'+p.toFixed(0)),
+    labels:prices.map(p=>'$'+p.toFixed(0)),
     datasets:[
-      {{ label:'P&L attuale', data:[], borderColor:'#00C2FF', backgroundColor:'rgba(0,194,255,0.08)', fill:true, pointRadius:0, borderWidth:2.5, tension:0.3 }},
-      {{ label:'P&L a scadenza', data:[], borderColor:'#888780', backgroundColor:'transparent', fill:false, pointRadius:0, borderWidth:1.5, tension:0, borderDash:[6,4] }}
+      {{label:'Valore attuale',data:[],borderColor:'#00C2FF',backgroundColor:'rgba(0,194,255,0.07)',fill:true,pointRadius:0,borderWidth:2,tension:0.25}},
+      {{label:'A scadenza',data:[],borderColor:'#555',backgroundColor:'transparent',fill:false,pointRadius:0,borderWidth:1.5,tension:0,borderDash:[5,4]}}
     ]
   }},
   options:{{
-    responsive:true, maintainAspectRatio:false,
+    responsive:true,maintainAspectRatio:false,
+    animation:false,
     interaction:{{mode:'index',intersect:false}},
-    plugins:{{ legend:{{display:false}}, tooltip:{{
-      callbacks:{{
-        title: ctx => 'SPY a '+ctx[0].label,
-        label: ctx => {{
+    plugins:{{
+      legend:{{display:false}},
+      tooltip:{{callbacks:{{
+        title:ctx=>'SPY: '+ctx[0].label,
+        label:ctx=>{{
           const v=ctx.dataset.data[ctx.dataIndex];
-          if(v===null||v===undefined) return null;
-          return ctx.dataset.label+': '+(v>=0?'+':'')+'$'+v.toFixed(0);
+          return ctx.dataset.label+': '+(v>=0?'+':'')+'$'+Math.round(v);
         }}
-      }}
-    }} }},
+      }}}}
+    }},
     scales:{{
-      x:{{ ticks:{{autoSkip:true,maxTicksLimit:11,color:'#888780',font:{{size:11}}}}, grid:{{color:'rgba(136,135,128,0.15)'}} }},
-      y:{{ ticks:{{color:'#888780',font:{{size:11}},callback:v=>(v>=0?'+':'')+' $'+v.toFixed(0)}}, grid:{{color:'rgba(136,135,128,0.15)'}} }}
+      x:{{ticks:{{autoSkip:true,maxTicksLimit:11,color:'#8B9FC0',font:{{size:10}}}},grid:{{color:'rgba(136,135,128,0.12)'}}}},
+      y:{{ticks:{{color:'#8B9FC0',font:{{size:10}},callback:v=>(v>=0?'+':'')+'$'+Math.round(v)}},grid:{{color:'rgba(136,135,128,0.12)'}}}}
     }}
   }}
 }});
 
-function updateChart() {{
-  const dte  = parseFloat(document.getElementById('dteR').value);
-  const iv   = parseFloat(document.getElementById('ivR').value)/100;
-  const T    = Math.max(dte/365, 0.0001);
-  document.getElementById('dteRval').textContent = Math.round(dte);
-  document.getElementById('ivRval').textContent  = parseFloat(document.getElementById('ivR').value).toFixed(1);
+function update(){{
+  const dte=parseInt(document.getElementById('dteR').value);
+  const ivPct=parseInt(document.getElementById('ivR').value);
+  const iv=ivPct/100;
+  const T=Math.max(dte/365,0.0001);
+  document.getElementById('dteRval').textContent=dte;
+  document.getElementById('ivRval').textContent=ivPct;
 
-  const currentData = prices.map(p => +((bsOption(p,STRIKE,T,R,iv)-PREMIO)*100*CONTRATTI).toFixed(0));
-  const expData     = prices.map(p => {{
-    const v = IS_CALL ? Math.max(p-STRIKE,0) : Math.max(STRIKE-p,0);
-    return +(( v - PREMIO)*100*CONTRATTI).toFixed(0);
+  // Curva valore attuale
+  chart.data.datasets[0].data=prices.map(p=>+((bsOpt(p,STRIKE,T,R,iv)-PREMIO)*100*CONTRATTI).toFixed(1));
+  // Curva scadenza
+  chart.data.datasets[1].data=prices.map(p=>{{
+    const v=IS_CALL?Math.max(p-STRIKE,0):Math.max(STRIKE-p,0);
+    return +((v-PREMIO)*100*CONTRATTI).toFixed(1);
   }});
-  chart.data.datasets[0].data = currentData;
-  chart.data.datasets[1].data = expData;
   chart.update('none');
 
-  const spotVal  = bsOption(SPOT,STRIKE,T,R,iv);
-  const spotPnl  = (spotVal-PREMIO)*100*CONTRATTI;
-  const molt     = spotVal/PREMIO;
-  const theta    = bsTheta(SPOT,STRIKE,T,R,iv)*100*CONTRATTI;
-  const pnlEl    = document.getElementById('pnlSpot');
-  pnlEl.textContent = (spotPnl>=0?'+':'')+'$'+spotPnl.toFixed(0);
-  pnlEl.style.color  = spotPnl>=0?'#00E5A0':'#FF5A5A';
-  document.getElementById('valOpt').textContent = '$'+spotVal.toFixed(4);
-  document.getElementById('moltip').textContent = molt.toFixed(2)+'x';
-  document.getElementById('moltip').style.color = molt>=1?'#00E5A0':'#FF5A5A';
-  document.getElementById('thetaV').textContent = '$'+theta.toFixed(2)+'/gg';
-  document.getElementById('thetaV').style.color  = '#FF5A5A';
+  // KPI live
+  const val=bsOpt(SPOT,STRIKE,T,R,iv);
+  const pnl=(val-PREMIO)*100*CONTRATTI;
+  const molt=PREMIO>0?val/PREMIO:0;
+  const theta=bsTheta(SPOT,STRIKE,T,R,iv)*100*CONTRATTI;
 
-  buildTable(dte, iv);
+  const el=document.getElementById('pnlSpot');
+  el.textContent=(pnl>=0?'+':'')+'$'+Math.round(pnl);
+  el.style.color=pnl>=0?'#00E5A0':'#FF5A5A';
+  document.getElementById('valOpt').textContent='$'+val.toFixed(2);
+  const em=document.getElementById('moltip');
+  em.textContent=molt.toFixed(2)+'x';
+  em.style.color=molt>=1?'#00E5A0':'#FF5A5A';
+  document.getElementById('thetaV').textContent='$'+theta.toFixed(2)+'/gg';
+
+  buildTable(dte,iv);
 }}
 
-function buildTable(dte, baseIV) {{
-  const ivLevels = [baseIV*0.6, baseIV*0.8, baseIV, baseIV*1.2, baseIV*1.4];
-  const ivLabels = ['-40%', '-20%', 'Attuale', '+20%', '+40%'];
-  const T = Math.max(dte/365, 0.0001);
-  const priceRange = [];
-  for(let p=-15; p<=15; p+=3) priceRange.push(+(SPOT*(1+p/100)).toFixed(2));
-
-  let html = '<thead><tr><th style="padding:4px 8px;color:#8B9FC0;text-align:left;border-bottom:1px solid #243550;">Prezzo</th>';
-  ivLabels.forEach(l => html += `<th style="padding:4px 8px;color:#8B9FC0;text-align:right;border-bottom:1px solid #243550;">${{l}}</th>`);
-  html += '</tr></thead><tbody>';
-
-  priceRange.forEach(p => {{
-    const isSpot = Math.abs(p-SPOT) < SPOT*0.02;
-    const rowStyle = isSpot ? 'background:rgba(0,194,255,0.05);' : '';
-    html += `<tr style="${{rowStyle}}"><td style="padding:3px 8px;color:#8B9FC0;white-space:nowrap;">${{p>=SPOT?'▲':'▼'}} ${{p.toFixed(0)}}</td>`;
-    ivLevels.forEach(iv => {{
-      const val = bsOption(p,STRIKE,T,R,iv);
-      const pnl = (val-PREMIO)*100*CONTRATTI;
-      const bg  = pnl>0 ? `rgba(0,229,160,${{Math.min(pnl/500,0.35)}})` : `rgba(255,90,90,${{Math.min(Math.abs(pnl)/500,0.35)}})`;
-      const col = pnl>0 ? '#00E5A0' : '#FF5A5A';
-      html += `<td style="padding:3px 8px;text-align:right;background:${{bg}};color:${{col}};font-weight:500;">${{pnl>=0?'+':''}}${{pnl.toFixed(0)}}</td>`;
+function buildTable(dte,baseIV){{
+  const ivLvl=[baseIV*0.6,baseIV*0.8,baseIV,baseIV*1.2,baseIV*1.4];
+  const ivLbl=['-40%','-20%','Att.','+20%','+40%'];
+  const T=Math.max(dte/365,0.0001);
+  const pr=[];
+  for(let p=-15;p<=15;p+=5) pr.push(+(SPOT*(1+p/100)).toFixed(2));
+  let h='<thead><tr><th style="padding:3px 6px;color:#8B9FC0;text-align:left;border-bottom:1px solid #243550;white-space:nowrap;">Prezzo</th>';
+  ivLbl.forEach(l=>h+=`<th style="padding:3px 6px;color:#8B9FC0;text-align:right;border-bottom:1px solid #243550;">${{l}}</th>`);
+  h+='</tr></thead><tbody>';
+  pr.forEach(p=>{{
+    const isSpot=Math.abs(p-SPOT)<SPOT*0.04;
+    h+=`<tr style="${{isSpot?'background:rgba(0,194,255,0.04);':''}}"><td style="padding:2px 6px;color:#8B9FC0;white-space:nowrap;">${{p>=SPOT?'▲':'▼'}} ${{p.toFixed(0)}}</td>`;
+    ivLvl.forEach(iv=>{{
+      const val=bsOpt(p,STRIKE,T,R,iv);
+      const pnl=(val-PREMIO)*100*CONTRATTI;
+      const bg=pnl>0?`rgba(0,229,160,${{Math.min(pnl/1000,0.3)}})`:`rgba(255,90,90,${{Math.min(Math.abs(pnl)/1000,0.3)}})`;
+      const col=pnl>0?'#00E5A0':'#FF5A5A';
+      h+=`<td style="padding:2px 6px;text-align:right;background:${{bg}};color:${{col}};font-weight:500;">${{pnl>=0?'+':''}}${{Math.round(pnl)}}</td>`;
     }});
-    html += '</tr>';
+    h+='</tr>';
   }});
-  html += '</tbody>';
-  document.getElementById('scenTable').innerHTML = html;
+  h+='</tbody>';
+  document.getElementById('scenTable').innerHTML=h;
 }}
 
-document.getElementById('dteR').addEventListener('input', updateChart);
-document.getElementById('ivR').addEventListener('input', updateChart);
-updateChart();
+document.getElementById('dteR').addEventListener('input',update);
+document.getElementById('ivR').addEventListener('input',update);
+update();
 </script>
 """
-    st.components.v1.html(lo_chart_html, height=850, scrolling=False)
+    st.components.v1.html(lo_chart_html, height=780, scrolling=False)
 
     # ── Riepilogo operazione ──
     st.markdown(f"""
