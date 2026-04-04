@@ -2321,21 +2321,26 @@ with st.sidebar:
     iv_pct = float(st.session_state["slider_iv"])
 
     # ── IV RANK (solo Put Scoperta / Bull Put Spread) ──
-    if "slider_ivr" not in st.session_state: st.session_state["slider_ivr"] = 50.0
-    if "input_ivr" not in st.session_state: st.session_state["input_ivr"] = st.session_state["slider_ivr"]
+    # "_ivr_val" è la chiave protetta — non legata a nessun widget, non viene mai resettata da Streamlit
+    if "_ivr_val" not in st.session_state: st.session_state["_ivr_val"] = 50.0
     if STRATEGIA not in ("long_call", "long_put"):
+        if "slider_ivr" not in st.session_state: st.session_state["slider_ivr"] = st.session_state["_ivr_val"]
+        if "input_ivr"  not in st.session_state: st.session_state["input_ivr"]  = st.session_state["_ivr_val"]
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK (0–100)</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
         with col_s:
             st.slider("ivr_s", 0.0, 100.0, step=0.5, key="slider_ivr",
                 label_visibility="collapsed",
-                on_change=lambda: st.session_state.update({"input_ivr": st.session_state["slider_ivr"]}),
+                on_change=lambda: (st.session_state.update({"input_ivr": st.session_state["slider_ivr"]}),
+                                   st.session_state.update({"_ivr_val":   st.session_state["slider_ivr"]})),
                 help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere.")
         with col_n:
             st.number_input("ivr_n", 0.0, 100.0, step=0.5, format="%.2f", key="input_ivr",
                 label_visibility="collapsed",
-                on_change=lambda: st.session_state.update({"slider_ivr": float(st.session_state["input_ivr"])}))
-    iv_rank_reale = float(st.session_state["slider_ivr"])
+                on_change=lambda: (st.session_state.update({"slider_ivr": float(st.session_state["input_ivr"])}),
+                                   st.session_state.update({"_ivr_val":   float(st.session_state["input_ivr"])})))
+        st.session_state["_ivr_val"] = float(st.session_state["slider_ivr"])
+    iv_rank_reale = float(st.session_state["_ivr_val"])
 
     r_pct = 4.5
 
@@ -2378,22 +2383,27 @@ with st.sidebar:
     crash = 20.0
 
     # ── OBIETTIVO STRATEGIA (solo Put Scoperta / Bull Put Spread) ──
-    if "slider_pt" not in st.session_state: st.session_state["slider_pt"] = 84.0
-    if "input_pt" not in st.session_state: st.session_state["input_pt"] = st.session_state["slider_pt"]
+    # "_pt_val" è la chiave protetta — sopravvive anche quando il widget non è renderizzato
+    if "_pt_val" not in st.session_state: st.session_state["_pt_val"] = 84.0
     if STRATEGIA not in ("long_call", "long_put"):
+        if "slider_pt" not in st.session_state: st.session_state["slider_pt"] = st.session_state["_pt_val"]
+        if "input_pt"  not in st.session_state: st.session_state["input_pt"]  = st.session_state["_pt_val"]
         st.markdown("<div class='sb-section'>Obiettivo Strategia</div>", unsafe_allow_html=True)
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>PROBABILITÀ DI SUCCESSO (%)</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
         with col_s:
             st.slider("pt_s", 70.0, 99.0, step=1.0, key="slider_pt",
                 label_visibility="collapsed",
-                on_change=lambda: st.session_state.update({"input_pt": st.session_state["slider_pt"]}),
+                on_change=lambda: (st.session_state.update({"input_pt": st.session_state["slider_pt"]}),
+                                   st.session_state.update({"_pt_val":  st.session_state["slider_pt"]})),
                 help="84% = Delta 0.16 — ottimale.\n90% = Delta 0.10 — conservativo.\n80% = Delta 0.20 — aggressivo.")
         with col_n:
             st.number_input("pt_n", 70.0, 99.0, step=1.0, format="%.2f", key="input_pt",
                 label_visibility="collapsed",
-                on_change=lambda: st.session_state.update({"slider_pt": float(st.session_state["input_pt"])}))
-    prob_t = float(st.session_state["slider_pt"])
+                on_change=lambda: (st.session_state.update({"slider_pt": float(st.session_state["input_pt"])}),
+                                   st.session_state.update({"_pt_val":   float(st.session_state["input_pt"])})))
+        st.session_state["_pt_val"] = float(st.session_state["slider_pt"])
+    prob_t = float(st.session_state["_pt_val"])
 
     # Parametri specifici Bull Put Spread
     if STRATEGIA == "bull_put_spread":
@@ -2780,138 +2790,138 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── BARRA 4 DATI LIVE &mdash; frecce semantiche ──
-# Usiamo delta_color="off" su tutti: Streamlit non aggiunge frecce proprie.
-# Freccia e colore nel testo, poi CSS custom colora i delta per posizione.
+# ── BARRA 5 KPI LIVE + SEMAFORO (solo strategie di vendita) ──
+if STRATEGIA not in ("long_call", "long_put"):
 
-# Prezzo Spot
-if var > 0.05:
-    spot_arrow = f"&#9650; +{fmt(var,2)}% oggi"
-    spot_cls   = "green"
-elif var < -0.05:
-    spot_arrow = f"&#9660; {fmt(var,2)}% oggi"
-    spot_cls   = "red"
-else:
-    spot_arrow = f"&#8596; {fmt(var,2)}% oggi"
-    spot_cls   = "gold"
+    # Prezzo Spot
+    if var > 0.05:
+        spot_arrow = f"&#9650; +{fmt(var,2)}% oggi"
+        spot_cls   = "green"
+    elif var < -0.05:
+        spot_arrow = f"&#9660; {fmt(var,2)}% oggi"
+        spot_cls   = "red"
+    else:
+        spot_arrow = f"&#8596; {fmt(var,2)}% oggi"
+        spot_cls   = "gold"
 
-# Vol. Storica: alta=verde, media=arancio, bassa=rosso
-if vol_st >= 25:
-    vol_arrow = "&#9650; Alta &mdash; Premi elevati"
-    vol_cls   = "green"
-elif vol_st >= 15:
-    vol_arrow = "&#8596; Media &mdash; Nella norma"
-    vol_cls   = "gold"
-else:
-    vol_arrow = "&#9660; Bassa &mdash; Premi scarsi"
-    vol_cls   = "red"
+    # Vol. Storica: alta=verde, media=arancio, bassa=rosso
+    if vol_st >= 25:
+        vol_arrow = "&#9650; Alta &mdash; Premi elevati"
+        vol_cls   = "green"
+    elif vol_st >= 15:
+        vol_arrow = "&#8596; Media &mdash; Nella norma"
+        vol_cls   = "gold"
+    else:
+        vol_arrow = "&#9660; Bassa &mdash; Premi scarsi"
+        vol_cls   = "red"
 
-# IV Rank: alto=verde, medio=arancio, basso=rosso
-if iv_rank >= 50:
-    ivr_arrow = "&#9650; Alto &mdash; Vendi"
-    ivr_cls   = "green"
-elif iv_rank >= 30:
-    ivr_arrow = "&#8596; Medio &mdash; Valuta"
-    ivr_cls   = "gold"
-else:
-    ivr_arrow = "&#9660; Basso &mdash; Aspetta"
-    ivr_cls   = "red"
+    # IV Rank: alto=verde, medio=arancio, basso=rosso
+    if iv_rank >= 50:
+        ivr_arrow = "&#9650; Alto &mdash; Vendi"
+        ivr_cls   = "green"
+    elif iv_rank >= 30:
+        ivr_arrow = "&#8596; Medio &mdash; Valuta"
+        ivr_cls   = "gold"
+    else:
+        ivr_arrow = "&#9660; Basso &mdash; Aspetta"
+        ivr_cls   = "red"
 
-# VIX: alto=verde, medio=arancio, basso=rosso
-if vix_val and vix_val >= _vix_high:
-    vix_arrow = "&#9650; Elevato &mdash; Vendi"
-    vix_cls   = "green"
-elif vix_val and vix_val >= _vix_mid:
-    vix_arrow = "&#8596; Normale &mdash; Nella norma"
-    vix_cls   = "gold"
-elif vix_val:
-    vix_arrow = "&#9660; Basso &mdash; Premi scarsi"
-    vix_cls   = "red"
-else:
-    vix_arrow = "Non disponibile"
-    vix_cls   = "gold"
+    # VIX: alto=verde, medio=arancio, basso=rosso
+    if vix_val and vix_val >= _vix_high:
+        vix_arrow = "&#9650; Elevato &mdash; Vendi"
+        vix_cls   = "green"
+    elif vix_val and vix_val >= _vix_mid:
+        vix_arrow = "&#8596; Normale &mdash; Nella norma"
+        vix_cls   = "gold"
+    elif vix_val:
+        vix_arrow = "&#9660; Basso &mdash; Premi scarsi"
+        vix_cls   = "red"
+    else:
+        vix_arrow = "Non disponibile"
+        vix_cls   = "gold"
 
-# IV IND: per vendita opzioni alto=verde, basso=rosso
-if iv_ind >= 30:
-    iv_ind_cls   = "green"
-    iv_ind_label = "&#9650; Alta &mdash; Vendi"
-elif iv_ind >= 20:
-    iv_ind_cls   = "gold"
-    iv_ind_label = "&#8596; Media &mdash; Valuta"
-else:
-    iv_ind_cls   = "red"
-    iv_ind_label = "&#9660; Bassa &mdash; Aspetta"
-iv_ind_fonte = "Da slider IV IND"
+    # IV IND: per vendita opzioni alto=verde, basso=rosso
+    if iv_ind >= 30:
+        iv_ind_cls   = "green"
+        iv_ind_label = "&#9650; Alta &mdash; Vendi"
+    elif iv_ind >= 20:
+        iv_ind_cls   = "gold"
+        iv_ind_label = "&#8596; Media &mdash; Valuta"
+    else:
+        iv_ind_cls   = "red"
+        iv_ind_label = "&#9660; Bassa &mdash; Aspetta"
+    iv_ind_fonte = "Da slider IV IND"
 
 
-st.markdown(f"""
-<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.7rem;margin-bottom:2rem;margin-left:-0.5rem;margin-right:-0.5rem;width:calc(100% + 1rem);box-sizing:border-box">
+    st.markdown(f"""
+    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0.7rem;margin-bottom:2rem;margin-left:-0.5rem;margin-right:-0.5rem;width:calc(100% + 1rem);box-sizing:border-box">
 
-  <div class="kpi-card kpi-sm" style="animation-delay:0.0s">
-    <div class="kpi-eyebrow greek-tooltip">&#9679; Prezzo Spot
-        <span class="tip-icon">?</span>
-        <div class="tip-box">Prezzo di chiusura pi&ugrave; recente del sottostante selezionato, scaricato in tempo reale. &Egrave; il riferimento base per tutti i calcoli di strike, premio e margine.</div>
+      <div class="kpi-card kpi-sm" style="animation-delay:0.0s">
+        <div class="kpi-eyebrow greek-tooltip">&#9679; Prezzo Spot
+            <span class="tip-icon">?</span>
+            <div class="tip-box">Prezzo di chiusura pi&ugrave; recente del sottostante selezionato, scaricato in tempo reale. &Egrave; il riferimento base per tutti i calcoli di strike, premio e margine.</div>
+        </div>
+        <div class="kpi-value {spot_cls}">{fmt(spot,2)}</div>
+        <div class="kpi-sub">Aggiornato<br>{ts_spot}</div>
+        <div><span class="kpi-badge {spot_cls}">{spot_arrow}</span></div>
+      </div>
+
+      <div class="kpi-card kpi-sm" style="animation-delay:0.06s">
+        <div class="kpi-eyebrow greek-tooltip">&#9679; Vol. Storica 30gg
+            <span class="tip-icon">?</span>
+            <div class="tip-box">Volatilità reale del sottostante negli ultimi 30 giorni, annualizzata. Indica quanto si è mosso il prezzo storicamente. Confrontata con la IV: se IV &gt; Vol. Storica significa che le opzioni sono care &mdash; condizione favorevole per vendere.</div>
+        </div>
+        <div class="kpi-value {vol_cls}">{fmt(vol_st,2)}%</div>
+        <div class="kpi-sub">Aggiornato<br>{ts_vol}</div>
+        <div><span class="kpi-badge {vol_cls}">{vol_arrow}</span></div>
+      </div>
+
+      <div class="kpi-card kpi-sm" style="animation-delay:0.12s">
+        <div class="kpi-eyebrow greek-tooltip">&#9679; IV Rank
+            <span class="tip-icon">?</span>
+            <div class="tip-box">Indica quanto è alta la volatilità implicita attuale rispetto agli ultimi 12 mesi. 0 = minimo storico, 100 = massimo storico. Sopra 50 = buon momento per vendere opzioni (regola quantitativa). Sotto 30 = premi troppo bassi, meglio aspettare.</div>
+        </div>
+        <div class="kpi-value {ivr_cls}">{fmt(iv_rank,0)} / 100</div>
+        <div class="kpi-sub">Aggiornato<br>{ts_ivr}</div>
+        <div><span class="kpi-badge {ivr_cls}">{ivr_arrow}</span></div>
+      </div>
+
+      <div class="kpi-card kpi-sm" style="animation-delay:0.18s">
+        <div class="kpi-eyebrow greek-tooltip">&#9679; {vix_label}
+            <span class="tip-icon">?</span>
+            <div class="tip-box">{vix_tooltip}</div>
+        </div>
+        <div class="kpi-value {vix_cls}">{vix_str}</div>
+        <div class="kpi-sub">Aggiornato<br>{ts_vix}</div>
+        <div><span class="kpi-badge {vix_cls}">{vix_arrow}</span></div>
+      </div>
+
+      <div class="kpi-card kpi-sm" style="animation-delay:0.24s">
+        <div class="kpi-eyebrow greek-tooltip">&#9679; IV IND
+            <span class="tip-icon">?</span>
+            <div class="tip-box">IV implicita dello strumento, calcolata sulle sue opzioni quotate. Alta = premi gonfiati, ottimo per vendere. Bassa = aspetta.</div>
+        </div>
+        <div class="kpi-value {iv_ind_cls}">{fmt(iv_ind,1)}%</div>
+        <div class="kpi-sub">{iv_ind_fonte}</div>
+        <div><span class="kpi-badge {iv_ind_cls}">{iv_ind_label}</span></div>
+      </div>
+
     </div>
-    <div class="kpi-value {spot_cls}">{fmt(spot,2)}</div>
-    <div class="kpi-sub">Aggiornato<br>{ts_spot}</div>
-    <div><span class="kpi-badge {spot_cls}">{spot_arrow}</span></div>
-  </div>
+    """, unsafe_allow_html=True)
 
-  <div class="kpi-card kpi-sm" style="animation-delay:0.06s">
-    <div class="kpi-eyebrow greek-tooltip">&#9679; Vol. Storica 30gg
-        <span class="tip-icon">?</span>
-        <div class="tip-box">Volatilità reale del sottostante negli ultimi 30 giorni, annualizzata. Indica quanto si è mosso il prezzo storicamente. Confrontata con la IV: se IV &gt; Vol. Storica significa che le opzioni sono care &mdash; condizione favorevole per vendere.</div>
-    </div>
-    <div class="kpi-value {vol_cls}">{fmt(vol_st,2)}%</div>
-    <div class="kpi-sub">Aggiornato<br>{ts_vol}</div>
-    <div><span class="kpi-badge {vol_cls}">{vol_arrow}</span></div>
-  </div>
+    # variabili comuni
+    pn       = sc["lt"]                                        # perdita netta totale (già al netto del premio)
+    rend_ann = (((1 + rend / 100) ** 12) - 1) * 100           # rendimento annuo composto
 
-  <div class="kpi-card kpi-sm" style="animation-delay:0.12s">
-    <div class="kpi-eyebrow greek-tooltip">&#9679; IV Rank
-        <span class="tip-icon">?</span>
-        <div class="tip-box">Indica quanto è alta la volatilità implicita attuale rispetto agli ultimi 12 mesi. 0 = minimo storico, 100 = massimo storico. Sopra 50 = buon momento per vendere opzioni (regola quantitativa). Sotto 30 = premi troppo bassi, meglio aspettare.</div>
-    </div>
-    <div class="kpi-value {ivr_cls}">{fmt(iv_rank,0)} / 100</div>
-    <div class="kpi-sub">Aggiornato<br>{ts_ivr}</div>
-    <div><span class="kpi-badge {ivr_cls}">{ivr_arrow}</span></div>
-  </div>
-
-  <div class="kpi-card kpi-sm" style="animation-delay:0.18s">
-    <div class="kpi-eyebrow greek-tooltip">&#9679; {vix_label}
-        <span class="tip-icon">?</span>
-        <div class="tip-box">{vix_tooltip}</div>
-    </div>
-    <div class="kpi-value {vix_cls}">{vix_str}</div>
-    <div class="kpi-sub">Aggiornato<br>{ts_vix}</div>
-    <div><span class="kpi-badge {vix_cls}">{vix_arrow}</span></div>
-  </div>
-
-  <div class="kpi-card kpi-sm" style="animation-delay:0.24s">
-    <div class="kpi-eyebrow greek-tooltip">&#9679; IV IND
-        <span class="tip-icon">?</span>
-        <div class="tip-box">IV implicita dello strumento, calcolata sulle sue opzioni quotate. Alta = premi gonfiati, ottimo per vendere. Bassa = aspetta.</div>
-    </div>
-    <div class="kpi-value {iv_ind_cls}">{fmt(iv_ind,1)}%</div>
-    <div class="kpi-sub">{iv_ind_fonte}</div>
-    <div><span class="kpi-badge {iv_ind_cls}">{iv_ind_label}</span></div>
-  </div>
-
-</div>
-""", unsafe_allow_html=True)
-
-# variabili comuni
-pn       = sc["lt"]                                        # perdita netta totale (già al netto del premio)
-rend_ann = (((1 + rend / 100) ** 12) - 1) * 100           # rendimento annuo composto
-
-# ── SIGNAL BANNER ──
-st.markdown(f"""
-<div class="signal-banner {sema['c']}">
+    # ── SIGNAL BANNER ──
+    st.markdown(f"""
+    <div class="signal-banner {sema['c']}">
     <span class="signal-dot {sema['c']}"></span>
     <span class="signal-label">{sema['l']}</span>
     <span class="signal-text">{sema['d']}</span>
-</div>
-""", unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
+# ── fine blocco KPI + semaforo ──
 
 
 # ══════════════════════════════════════════════════════════
@@ -3612,12 +3622,13 @@ if STRATEGIA in ("long_call", "long_put"):
     with st.sidebar:
         st.markdown(f"<div class='sb-section'>{tipo_label}</div>", unsafe_allow_html=True)
 
-        # Strike — default = spot corrente
+        # Strike — default = spot corrente; si resetta automaticamente al cambio ticker
         _spot_rounded = float(round(spot))
-        if "slider_lo_strike" not in st.session_state:
+        _prev_tk_lo = st.session_state.get("_lo_strike_tk", None)
+        if _prev_tk_lo != tk or "slider_lo_strike" not in st.session_state:
             st.session_state["slider_lo_strike"] = _spot_rounded
-        if "input_lo_strike" not in st.session_state:
-            st.session_state["input_lo_strike"] = _spot_rounded
+            st.session_state["input_lo_strike"]  = _spot_rounded
+            st.session_state["_lo_strike_tk"]    = tk
         st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>STRIKE</span>", unsafe_allow_html=True)
         col_s, col_n = st.columns([2,1])
         _smin, _smax = float(round(spot*0.7)), float(round(spot*1.3))
