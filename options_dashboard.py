@@ -1572,7 +1572,7 @@ def costruisci_prompt_ai(strategia, params, dati_mercato) -> str:
         mc     = params.get("mc", 0)
         marg   = params.get("marg_tot", mc * n)
         credito_tot = round(prem * n * 100, 2)
-        strat_str = f"Put Scoperta — Strike {K:.2f}, Premio {prem:.4f}/az., Credito totale +{credito_tot:.2f}€, Margine {marg:.2f}€"
+        strat_str = f"Put Scoperta — Strike {K:.2f}, Premio {prem:.2f}/az., Credito totale +{credito_tot:.2f}€, Margine {marg:.2f}€"
     else:
         K_v    = params["bps_K_venduta"]
         K_c    = params["bps_K_comprata"]
@@ -2031,12 +2031,12 @@ def genera_pdf_scenari(strategia, params):
     if strategia == "put_scoperta":
         param_rows = [
             ["Strumento",   nome,          "Strike",           f"{K:.2f}"],
-            ["Prezzo Spot", f"{spot:.2f}", "Premio / az.",     f"{prem:.4f}"],
+            ["Prezzo Spot", f"{spot:.2f}", "Premio / az.",     f"{prem:.2f}"],
             ["DTE",         f"{dte} gg",   "Contratti",        str(n)],
             ["IV",          f"{sigma*100:.1f}%", "Credito tot.", f"+{prem*n*mult:.2f} \u20ac"],
         ]
     else:
-        pv_str = f"{pv_reale:.2f}" if pv_reale else f"{credito:.4f}"
+        pv_str = f"{pv_reale:.2f}" if pv_reale else f"{credito:.2f}"
         pc_str = f"{pc_reale:.2f}" if pc_reale else "\u2014"
         param_rows = [
             ["Strumento",    nome,              "Strike vend.",     f"{K_v:.2f}"],
@@ -2333,26 +2333,25 @@ with st.sidebar:
     st.session_state["_iv_pct_init"] = float(st.session_state["slider_iv"])
     iv_pct = float(st.session_state["slider_iv"])
 
-    # ── IV RANK (solo Put Scoperta / Bull Put Spread) ──
+    # ── IV RANK (tutte le strategie — l'utente lo inserisce dal broker) ──
     # "_ivr_val" è la chiave protetta — non legata a nessun widget, non viene mai resettata da Streamlit
     if "_ivr_val" not in st.session_state: st.session_state["_ivr_val"] = 50.0
-    if STRATEGIA not in ("long_call", "long_put"):
-        if "slider_ivr" not in st.session_state: st.session_state["slider_ivr"] = st.session_state["_ivr_val"]
-        if "input_ivr"  not in st.session_state: st.session_state["input_ivr"]  = st.session_state["_ivr_val"]
-        st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK (0–100)</span>", unsafe_allow_html=True)
-        col_s, col_n = st.columns([2,1])
-        with col_s:
-            st.slider("ivr_s", 0.0, 100.0, step=0.5, key="slider_ivr",
-                label_visibility="collapsed",
-                on_change=lambda: (st.session_state.update({"input_ivr": st.session_state["slider_ivr"]}),
-                                   st.session_state.update({"_ivr_val":   st.session_state["slider_ivr"]})),
-                help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere.")
-        with col_n:
-            st.number_input("ivr_n", 0.0, 100.0, step=0.5, format="%.2f", key="input_ivr",
-                label_visibility="collapsed",
-                on_change=lambda: (st.session_state.update({"slider_ivr": float(st.session_state["input_ivr"])}),
-                                   st.session_state.update({"_ivr_val":   float(st.session_state["input_ivr"])})))
-        st.session_state["_ivr_val"] = float(st.session_state["slider_ivr"])
+    if "slider_ivr" not in st.session_state: st.session_state["slider_ivr"] = st.session_state["_ivr_val"]
+    if "input_ivr"  not in st.session_state: st.session_state["input_ivr"]  = st.session_state["_ivr_val"]
+    st.markdown("<span style='font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.1em'>IV RANK (0–100)</span>", unsafe_allow_html=True)
+    col_s, col_n = st.columns([2,1])
+    with col_s:
+        st.slider("ivr_s", 0.0, 100.0, step=0.5, key="slider_ivr",
+            label_visibility="collapsed",
+            on_change=lambda: (st.session_state.update({"input_ivr": st.session_state["slider_ivr"]}),
+                               st.session_state.update({"_ivr_val":   st.session_state["slider_ivr"]})),
+            help="Posizione della IV attuale rispetto agli ultimi 12 mesi. Sopra 50 = buon momento per vendere. Inserisci il valore dal tuo broker.")
+    with col_n:
+        st.number_input("ivr_n", 0.0, 100.0, step=0.5, format="%.2f", key="input_ivr",
+            label_visibility="collapsed",
+            on_change=lambda: (st.session_state.update({"slider_ivr": float(st.session_state["input_ivr"])}),
+                               st.session_state.update({"_ivr_val":   float(st.session_state["input_ivr"])})))
+    st.session_state["_ivr_val"] = float(st.session_state["slider_ivr"])
     iv_rank_reale = float(st.session_state["_ivr_val"])
 
     r_pct = 4.5
@@ -3254,7 +3253,7 @@ updateChart(TOTAL_DTE);
                       "Punto di Pareggio","Theta Giornaliero","Rendimento sul Margine"],
         "Valore":    [nome, fmt(spot,2), fmt(K,2), f"{fmt(dist,2)}% sotto lo spot",
                       f"{dte} gg",
-                      f"{fmt(prem,4)}  ({fmt(prem*100,2)} € / contratto 100 azioni)",
+                      f"{fmt(prem,2)}  ({fmt(prem*100,2)} € / contratto 100 azioni)",
                       str(n_contratti), f"{fmt(mc,2)} €",
                       f"{fmt(marg_tot,2)} € (da avere sul conto)",
                       f"+{fmt(ptot,2)} €",
@@ -3596,7 +3595,7 @@ updateChart(TOTAL_DTE,IV);
                       "Stop Loss (2x credito)","Rendimento sul Margine"],
         "Valore":    [nome, fmt(spot,2), fmt(bps_K_venduta,2), fmt(bps_K_comprata,2),
                       f"${larghezza_spread}", f"{dte} gg",
-                      f"{fmt(bps_credito,4)} ({fmt(bps_credito*100,2)} € / contratto)",
+                      f"{fmt(bps_credito,2)} ({fmt(bps_credito*100,2)} € / contratto)",
                       str(n_contratti), f"{fmt(bps_margine_c,0)} €",
                       f"{fmt(bps_margine_tot,0)} € (da avere sul conto)",
                       f"+{fmt(bps_credito_tot,2)} €",
@@ -3773,9 +3772,9 @@ if STRATEGIA in ("long_call", "long_put"):
   <div class="kpi-card kpi-sm" style="animation-delay:0s">
     <div class="kpi-eyebrow greek-tooltip">&#9679; Delta
       <span class="tip-icon">?</span>
-      <div class="tip-box">Sensibilit&agrave; del premio al movimento del sottostante. Per Long {'Call' if is_call else 'Put'}: valore {'positivo (0→1)' if is_call else 'negativo (-1→0)'}. Significa che per ogni +1€ di spot il premio varia di {fmt(abs(lo_delta),4)}€.</div>
+      <div class="tip-box">Sensibilit&agrave; del premio al movimento del sottostante. Per Long {'Call' if is_call else 'Put'}: valore {'positivo (0→1)' if is_call else 'negativo (-1→0)'}. Significa che per ogni +1€ di spot il premio varia di {fmt(abs(lo_delta),2)}€.</div>
     </div>
-    <div class="kpi-value {'cyan' if is_call else 'gold'}">{lo_delta:+.4f}</div>
+    <div class="kpi-value {'cyan' if is_call else 'gold'}">{lo_delta:+.2f}</div>
     <div class="kpi-sub">Esposizione {_delta_dir}</div>
   </div>
   <div class="kpi-card kpi-sm" style="animation-delay:0.06s">
@@ -3783,7 +3782,7 @@ if STRATEGIA in ("long_call", "long_put"):
       <span class="tip-icon">?</span>
       <div class="tip-box">Velocit&agrave; di variazione del Delta. Gamma alto = il Delta accelera con il movimento del sottostante — favorevole per il compratore in caso di forte direzionalit&agrave;.</div>
     </div>
-    <div class="kpi-value cyan">{lo_gamma:.6f}</div>
+    <div class="kpi-value cyan">{lo_gamma:.4f}</div>
     <div class="kpi-sub">Accelerazione Delta</div>
   </div>
   <div class="kpi-card kpi-sm" style="animation-delay:0.12s">
@@ -3791,15 +3790,15 @@ if STRATEGIA in ("long_call", "long_put"):
       <span class="tip-icon">?</span>
       <div class="tip-box">Costo del tempo: ogni giorno che passa l'opzione perde questo valore anche a parit&agrave; di prezzo. Per il compratore il Theta &egrave; il nemico &mdash; pi&ugrave; &egrave; basso (negativo), pi&ugrave; &egrave; costoso tenere la posizione.</div>
     </div>
-    <div class="kpi-value red">{lo_theta:+.4f}</div>
+    <div class="kpi-value red">{lo_theta:+.2f}</div>
     <div class="kpi-sub">{fmt(_theta_eur,2)} € / contratto / gg</div>
   </div>
   <div class="kpi-card kpi-sm" style="animation-delay:0.18s">
     <div class="kpi-eyebrow greek-tooltip">&#9679; Vega
       <span class="tip-icon">?</span>
-      <div class="tip-box">Sensibilit&agrave; al cambiamento dell'IV. Per il compratore il Vega &egrave; positivo: se la volatilit&agrave; sale il premio aumenta anche a parit&agrave; di spot. Vega di {fmt(lo_vega,4)} = +1% IV genera +{fmt(lo_vega,4)}€ di valore per azione.</div>
+      <div class="tip-box">Sensibilit&agrave; al cambiamento dell'IV. Per il compratore il Vega &egrave; positivo: se la volatilit&agrave; sale il premio aumenta anche a parit&agrave; di spot. Vega di {fmt(lo_vega,2)} = +1% IV genera +{fmt(lo_vega,2)}€ di valore per azione.</div>
     </div>
-    <div class="kpi-value green">{lo_vega:+.4f}</div>
+    <div class="kpi-value green">{lo_vega:+.2f}</div>
     <div class="kpi-sub">Esposizione alla IV</div>
   </div>
   <div class="kpi-card kpi-sm" style="animation-delay:0.24s">
@@ -4124,7 +4123,7 @@ if STRATEGIA == "strategy_advisor":
     else:
         adv_spot   = adv_dati["prezzo_spot"]
         adv_vix    = adv_dati["vix"] or 0
-        adv_ivr    = adv_dati["iv_rank"]
+        adv_ivr    = iv_rank_reale            # valore inserito dall'utente in sidebar
         adv_ivp    = adv_dati.get("iv_percentile", 50.0)
         adv_vol    = adv_dati["vol_storica"]
         adv_var    = adv_dati["variazione_gg"]
