@@ -1363,11 +1363,9 @@ def recupera_dati_mercato(ticker: str) -> dict:
             v_min = float(vol_rolling.min())
             v_max = float(vol_rolling.max())
             v_now = float(vol_rolling.iloc[-1])
-            iv_rank       = round((v_now - v_min) / (v_max - v_min) * 100, 1) if v_max > v_min else 50.0
-            iv_percentile = round(float((vol_rolling < v_now).sum() / len(vol_rolling) * 100), 1)
+            iv_rank = round((v_now - v_min) / (v_max - v_min) * 100, 1) if v_max > v_min else 50.0
         else:
-            iv_rank       = 50.0
-            iv_percentile = 50.0
+            iv_rank = 50.0
 
         # ── Trend direzionale (MA20 / MA50) ──
         ma_20 = float(h["Close"].tail(20).mean())
@@ -1401,7 +1399,6 @@ def recupera_dati_mercato(ticker: str) -> dict:
             "variazione_gg":round(var, 2),
             "vol_storica":  round(vol_30, 2),
             "iv_rank":      iv_rank,
-            "iv_percentile":iv_percentile,
             "ma_20":        round(ma_20, 2),
             "ma_50":        round(ma_50, 2),
             "trend":        trend,
@@ -1607,9 +1604,9 @@ PARAMETRI DELLA POSIZIONE:
 - Prezzo spot: {spot:.2f}
 - Variazione giornaliera: {var:+.2f}%
 - DTE: {dte} giorni
-- IV IND: {sigma*100:.1f}%
+- IV IND: {sigma*100:.2f}%
 - IV Rank: {iv_rank:.0f}/100
-- Volatilità storica 30gg: {vol_st:.1f}%
+- Volatilità storica 30gg: {vol_st:.2f}%
 - VIX: {vix:.2f}
 
 Produci un report professionale e neutro in italiano, strutturato esattamente così:
@@ -1624,7 +1621,7 @@ Massimo 5 righe. Sintetico e concreto.
 ──────────────────────────────────────
 2. LETTURA DELLA VOLATILITÀ
 ──────────────────────────────────────
-Analizza il rapporto tra IV IND ({sigma*100:.1f}%), IV Rank ({iv_rank:.0f}/100) e Vol. Storica ({vol_st:.1f}%).
+Analizza il rapporto tra IV IND ({sigma*100:.2f}%), IV Rank ({iv_rank:.0f}/100) e Vol. Storica ({vol_st:.2f}%).
 Il VIX è a {vix:.2f}.
 Rispondi: è un buon momento per vendere premium su questo sottostante?
 La volatilità implicita compensa adeguatamente il rischio?
@@ -1671,7 +1668,7 @@ Il tuo compito è analizzare {nome} ({ticker}) e produrre una raccomandazione di
 DATI DI MERCATO ATTUALI ({oggi}):
 - Prezzo spot: {spot:.2f}
 - Variazione giornaliera: {var:+.2f}%
-- Volatilità storica 30gg: {vol_st:.1f}%
+- Volatilità storica 30gg: {vol_st:.2f}%
 - {vix_sym.replace('^','')}: {vix:.2f}
 - IV Rank: {iv_rank:.0f}/100
 - Rapporto IV/HV: {(vix/vol_st if vol_st > 0 else 0):.2f}x
@@ -2033,7 +2030,7 @@ def genera_pdf_scenari(strategia, params):
             ["Strumento",   nome,          "Strike",           f"{K:.2f}"],
             ["Prezzo Spot", f"{spot:.2f}", "Premio / az.",     f"{prem:.2f}"],
             ["DTE",         f"{dte} gg",   "Contratti",        str(n)],
-            ["IV",          f"{sigma*100:.1f}%", "Credito tot.", f"+{prem*n*mult:.2f} \u20ac"],
+            ["IV",          f"{sigma*100:.2f}%", "Credito tot.", f"+{prem*n*mult:.2f} \u20ac"],
         ]
     else:
         pv_str = f"{pv_reale:.2f}" if pv_reale else f"{credito:.2f}"
@@ -2042,7 +2039,7 @@ def genera_pdf_scenari(strategia, params):
             ["Strumento",    nome,              "Strike vend.",     f"{K_v:.2f}"],
             ["Prezzo Spot",  f"{spot:.2f}",     "Strike comp.",     f"{K_c:.2f}"],
             ["DTE",          f"{dte} gg",       "Put vend. (bid)",  pv_str],
-            ["IV",           f"{sigma*100:.1f}%","Put comp. (ask)", pc_str],
+            ["IV",           f"{sigma*100:.2f}%","Put comp. (ask)", pc_str],
             ["Contratti",    str(n),            "Credito netto",    f"{credito:.2f} (+{credito*n*mult:.0f}\u20ac)"],
         ]
 
@@ -2913,7 +2910,7 @@ if STRATEGIA not in ("long_call", "long_put"):
             <span class="tip-icon">?</span>
             <div class="tip-box">IV implicita dello strumento, calcolata sulle sue opzioni quotate. Alta = premi gonfiati, ottimo per vendere. Bassa = aspetta.</div>
         </div>
-        <div class="kpi-value {iv_ind_cls}">{fmt(iv_ind,1)}%</div>
+        <div class="kpi-value {iv_ind_cls}">{fmt(iv_ind,2)}%</div>
         <div class="kpi-sub">{iv_ind_fonte}</div>
         <div><span class="kpi-badge {iv_ind_cls}">{iv_ind_label}</span></div>
       </div>
@@ -4018,7 +4015,7 @@ update();
     <div class="tip-box-static"><span class="label">Costo totale</span><span class="val">{fmt(lo_premio*100*lo_contratti,2)} €</span></div>
     <div class="tip-box-static"><span class="label">Break-even</span><span class="val">{fmt(lo_be,2)}</span></div>
     <div class="tip-box-static"><span class="label">Max perdita</span><span class="val">-{fmt(lo_max_loss,2)} € (premio pagato)</span></div>
-    <div class="tip-box-static"><span class="label">IV IND</span><span class="val">{iv_pct:.1f}%</span></div>
+    <div class="tip-box-static"><span class="label">IV IND</span><span class="val">{iv_pct:.2f}%</span></div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -4124,7 +4121,6 @@ if STRATEGIA == "strategy_advisor":
         adv_spot   = adv_dati["prezzo_spot"]
         adv_vix    = adv_dati["vix"] or 0
         adv_ivr    = iv_rank_reale            # valore inserito dall'utente in sidebar
-        adv_ivp    = adv_dati.get("iv_percentile", 50.0)
         adv_vol    = adv_dati["vol_storica"]
         adv_var    = adv_dati["variazione_gg"]
         adv_nome   = adv_dati["nome"]
@@ -4135,39 +4131,45 @@ if STRATEGIA == "strategy_advisor":
         adv_vix_lbl= "VXN" if adv_vix_sym == "^VXN" else "VIX"
 
         # ── KPI snapshot ──
-        iv_hv_ratio = round(adv_vix / adv_vol, 2) if adv_vol > 0 else 0
-        regime_vol  = "ESTREMA" if adv_vix >= 35 else "ALTA" if adv_vix >= 25 else "MEDIA" if adv_vix >= 18 else "BASSA"
-        regime_ivr  = "ALTO" if adv_ivr >= 50 else "MEDIO" if adv_ivr >= 30 else "BASSO"
-        vol_col     = "green" if adv_vix >= 25 else "gold" if adv_vix >= 18 else "red"
-        ivr_col     = "green" if adv_ivr >= 50 else "gold" if adv_ivr >= 30 else "red"
-        var_col     = "green" if adv_var >= 0 else "red"
+        iv_hv_ratio  = round(adv_vix / adv_vol, 2) if adv_vol > 0 else 0
+        _adv_vix_hi  = 25 if adv_vix_sym == "^VXN" else 20
+        _adv_vix_mid = 20 if adv_vix_sym == "^VXN" else 15
+        # Colori uniformati con la live bar principale
+        adv_spot_cls = "green" if adv_var > 0.05 else "red" if adv_var < -0.05 else "gold"
+        adv_vix_cls  = "green" if adv_vix >= _adv_vix_hi  else "gold" if adv_vix >= _adv_vix_mid else "red"
+        adv_ivr_cls  = "green" if adv_ivr >= 50 else "gold" if adv_ivr >= 30 else "red"
+        adv_vol_cls  = "green" if adv_vol >= 25 else "gold" if adv_vol >= 15 else "red"
+        # Sub-label uniformati con la live bar principale
+        adv_vix_sub  = "Elevato &mdash; Vendi" if adv_vix >= _adv_vix_hi else "Normale &mdash; Nella norma" if adv_vix >= _adv_vix_mid else "Basso &mdash; Premi scarsi"
+        adv_ivr_sub  = "Alto &mdash; Vendi" if adv_ivr >= 50 else "Medio &mdash; Valuta" if adv_ivr >= 30 else "Basso &mdash; Aspetta"
+        adv_vol_sub  = "Alta &mdash; Premi elevati" if adv_vol >= 25 else "Media &mdash; Nella norma" if adv_vol >= 15 else "Bassa &mdash; Premi scarsi"
 
         st.markdown(f"""
 <div class="kpi-grid">
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; Spot</div>
-    <div class="kpi-value cyan">{fmt(adv_spot,2)}</div>
+    <div class="kpi-value {adv_spot_cls}">{fmt(adv_spot,2)}</div>
     <div class="kpi-sub">Variazione oggi<br><span style="color:var(--{'accent-green' if adv_var>=0 else 'accent-red'})">{adv_var:+.2f}%</span></div>
   </div>
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; {adv_vix_lbl}</div>
-    <div class="kpi-value {vol_col}">{fmt(adv_vix,2)}</div>
-    <div class="kpi-sub">Regime volatilità<br>{regime_vol}</div>
+    <div class="kpi-value {adv_vix_cls}">{fmt(adv_vix,2)}</div>
+    <div class="kpi-sub">Regime volatilit&agrave;<br>{adv_vix_sub}</div>
   </div>
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; IV Rank</div>
-    <div class="kpi-value {ivr_col}">{fmt(adv_ivr,0)}/100</div>
-    <div class="kpi-sub">Premio<br>{regime_ivr}</div>
+    <div class="kpi-value {adv_ivr_cls}">{fmt(adv_ivr,0)} / 100</div>
+    <div class="kpi-sub">Dal broker (sidebar)<br>{adv_ivr_sub}</div>
   </div>
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; Vol. Storica 30gg</div>
-    <div class="kpi-value cyan">{fmt(adv_vol,1)}%</div>
+    <div class="kpi-value {adv_vol_cls}">{fmt(adv_vol,2)}%</div>
     <div class="kpi-sub">IV/HV ratio<br>{iv_hv_ratio}x</div>
   </div>
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; DTE Orizzonte</div>
     <div class="kpi-value gold">{adv_dte} gg</div>
-    <div class="kpi-sub">Capitale<br>€{adv_capitale:,}</div>
+    <div class="kpi-sub">Capitale<br>&euro;{adv_capitale:,}</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -4240,53 +4242,42 @@ if STRATEGIA == "strategy_advisor":
 """, unsafe_allow_html=True)
 
         # ── Card "Perché questa strategia" ──
-        _vix_ok   = adv_vix >= 25 or adv_vix >= 35
-        _vix_pos  = adv_vix >= 20
+        _vix_ok   = adv_vix >= _adv_vix_hi
+        _vix_pos  = adv_vix >= _adv_vix_mid
         _ivr_ok   = adv_ivr >= 50
         _ivr_pos  = adv_ivr >= 30
-        _ivp_ok   = adv_ivp >= 50
-        _ivp_pos  = adv_ivp >= 30
         _trend_ok = adv_trend in ("RIALZISTA", "RIBASSISTA")
 
         def _ind_badge(ok, pos):
-            if ok:   return "✓", "accent-green",  "green"
-            if pos:  return "~", "accent-gold",    "gold"
-            return           "✗", "accent-red",    "red"
+            if ok:   return "✓", "accent-green", "green"
+            if pos:  return "~", "accent-gold",  "gold"
+            return           "✗", "accent-red",  "red"
 
-        _vix_ic,  _vix_cc,  _vix_bc  = _ind_badge(_vix_ok,  _vix_pos)
-        _ivr_ic,  _ivr_cc,  _ivr_bc  = _ind_badge(_ivr_ok,  _ivr_pos)
-        _ivp_ic,  _ivp_cc,  _ivp_bc  = _ind_badge(_ivp_ok,  _ivp_pos)
-        _trd_ic,  _trd_cc,  _trd_bc  = _ind_badge(_trend_ok, _trend_ok)
+        _vix_ic, _vix_cc, _vix_bc = _ind_badge(_vix_ok,  _vix_pos)
+        _ivr_ic, _ivr_cc, _ivr_bc = _ind_badge(_ivr_ok,  _ivr_pos)
+        _trd_ic, _trd_cc, _trd_bc = _ind_badge(_trend_ok, _trend_ok)
 
         _vix_desc = ("Paura elevata → premi gonfiati, ottimo per vendere" if _vix_ok
-                     else "Volatilità nella norma → premi accettabili" if _vix_pos
-                     else "Volatilità bassa → premi ridotti, favorisce acquisto")
+                     else "Volatilit\u00e0 nella norma → premi accettabili" if _vix_pos
+                     else "Volatilit\u00e0 bassa → premi ridotti, favorisce acquisto")
         _ivr_desc = ("IV Rank alto → opzioni costose rispetto al passato" if _ivr_ok
                      else "IV Rank medio → valutare il contesto" if _ivr_pos
                      else "IV Rank basso → opzioni economiche, favorisce acquisto")
-        _ivp_desc = ("IV Percentile alto → IV superiore al " + fmt(adv_ivp, 0) + "% dei giorni dell'anno" if _ivp_ok
-                     else "IV Percentile medio → in linea con la media storica" if _ivp_pos
-                     else "IV Percentile basso → IV nel " + fmt(adv_ivp, 0) + "° percentile, opzioni a sconto")
         _trd_desc = (f"Trend {adv_trend} — MA20 {fmt(adv_ma20,2)}, MA50 {fmt(adv_ma50,2)}" if _trend_ok
-                     else f"Mercato laterale — nessuna direzionalità confermata (MA20 {fmt(adv_ma20,2)}, MA50 {fmt(adv_ma50,2)})")
+                     else f"Mercato laterale — nessuna direzionalit\u00e0 confermata (MA20 {fmt(adv_ma20,2)}, MA50 {fmt(adv_ma50,2)})")
 
         st.markdown(f"""
 <div class="section-title" style="margin-top:1.2rem">Perch&eacute; questa strategia</div>
-<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1rem">
+<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem">
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; {adv_vix_lbl}</div>
-    <div class="kpi-value {_vix_bc}" style="font-size:1.5rem">{fmt(adv_vix,1)} <span style="font-size:0.9rem;color:var(--{_vix_cc})">{_vix_ic}</span></div>
+    <div class="kpi-value {_vix_bc}" style="font-size:1.5rem">{fmt(adv_vix,2)} <span style="font-size:0.9rem;color:var(--{_vix_cc})">{_vix_ic}</span></div>
     <div class="kpi-sub" style="font-size:0.62rem">{_vix_desc}</div>
   </div>
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; IV Rank</div>
-    <div class="kpi-value {_ivr_bc}" style="font-size:1.5rem">{fmt(adv_ivr,0)}/100 <span style="font-size:0.9rem;color:var(--{_ivr_cc})">{_ivr_ic}</span></div>
+    <div class="kpi-value {_ivr_bc}" style="font-size:1.5rem">{fmt(adv_ivr,0)} / 100 <span style="font-size:0.9rem;color:var(--{_ivr_cc})">{_ivr_ic}</span></div>
     <div class="kpi-sub" style="font-size:0.62rem">{_ivr_desc}</div>
-  </div>
-  <div class="kpi-card kpi-sm">
-    <div class="kpi-eyebrow">&#9679; IV Percentile</div>
-    <div class="kpi-value {_ivp_bc}" style="font-size:1.5rem">{fmt(adv_ivp,0)}° <span style="font-size:0.9rem;color:var(--{_ivp_cc})">{_ivp_ic}</span></div>
-    <div class="kpi-sub" style="font-size:0.62rem">{_ivp_desc}</div>
   </div>
   <div class="kpi-card kpi-sm">
     <div class="kpi-eyebrow">&#9679; Trend</div>
