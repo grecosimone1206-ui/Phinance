@@ -4166,7 +4166,7 @@ if STRATEGIA == "strategy_advisor":
     <div class="kpi-value {adv_vol_cls}">{fmt(adv_vol,2)}%</div>
     <div class="kpi-sub">IV/HV ratio<br>{iv_hv_ratio}x</div>
   </div>
-  <div class="kpi-card kpi-sm">
+  <div class="kpi-card kpi-sm" style="overflow:visible">
     <div class="kpi-eyebrow">&#9679; DTE Orizzonte</div>
     <div class="kpi-value gold">{adv_dte} gg</div>
     <div class="kpi-sub">Capitale<br>&euro;{adv_capitale:,}</div>
