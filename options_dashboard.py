@@ -1363,9 +1363,18 @@ def recupera_dati_mercato(ticker: str) -> dict:
             v_min = float(vol_rolling.min())
             v_max = float(vol_rolling.max())
             v_now = float(vol_rolling.iloc[-1])
-            iv_rank = round((v_now - v_min) / (v_max - v_min) * 100, 1) if v_max > v_min else 50.0
+            iv_rank       = round((v_now - v_min) / (v_max - v_min) * 100, 1) if v_max > v_min else 50.0
+            iv_percentile = round(float((vol_rolling < v_now).sum() / len(vol_rolling) * 100), 1)
         else:
-            iv_rank = 50.0
+            iv_rank       = 50.0
+            iv_percentile = 50.0
+
+        # ── Trend direzionale (MA20 / MA50) ──
+        ma_20 = float(h["Close"].tail(20).mean())
+        ma_50 = float(h["Close"].tail(50).mean()) if len(h) >= 50 else ma_20
+        if   spot > ma_20 > ma_50: trend = "RIALZISTA"
+        elif spot < ma_20 < ma_50: trend = "RIBASSISTA"
+        else:                       trend = "LATERALE"
 
         ts_spot = ts
         ts_vol  = ts
@@ -1392,6 +1401,10 @@ def recupera_dati_mercato(ticker: str) -> dict:
             "variazione_gg":round(var, 2),
             "vol_storica":  round(vol_30, 2),
             "iv_rank":      iv_rank,
+            "iv_percentile":iv_percentile,
+            "ma_20":        round(ma_20, 2),
+            "ma_50":        round(ma_50, 2),
+            "trend":        trend,
             "vix":          vix_val,
             "vix_symbol":   vix_symbol if 'vix_symbol' in dir() else "^VIX",
             "nome":         nome,
@@ -3677,6 +3690,47 @@ if STRATEGIA in ("long_call", "long_put"):
     lo_be          = lo_strike + lo_premio if is_call else lo_strike - lo_premio
     lo_max_loss    = lo_premio * 100 * lo_contratti
 
+    # ── Greche (delta/theta corretti per tipo, gamma/vega identici) ──
+    if lo_T > 0 and lo_sigma > 0:
+        _lo_d1, _lo_d2 = d1d2(Par(S=spot, K=lo_strike, T=lo_T, r=lo_r, sigma=lo_sigma))
+        _lo_f   = si.norm.pdf(_lo_d1)
+        lo_delta = round(si.norm.cdf(_lo_d1), 4) if is_call else round(-si.norm.cdf(-_lo_d1), 4)
+        lo_gamma = round(_lo_f / (spot * lo_sigma * np.sqrt(lo_T)), 6)
+        lo_vega  = round(spot * _lo_f * np.sqrt(lo_T) / 100, 4)
+        if is_call:
+            lo_theta = round((-(spot * _lo_f * lo_sigma) / (2 * np.sqrt(lo_T))
+                              - lo_r * lo_strike * np.exp(-lo_r * lo_T) * si.norm.cdf(_lo_d2)) / 365, 4)
+        else:
+            lo_theta = round((-(spot * _lo_f * lo_sigma) / (2 * np.sqrt(lo_T))
+                              + lo_r * lo_strike * np.exp(-lo_r * lo_T) * si.norm.cdf(-_lo_d2)) / 365, 4)
+        # Prob. profitto calcolata sul break-even (non sullo strike)
+        _, _lo_d2_be = d1d2(Par(S=spot, K=lo_be, T=lo_T, r=lo_r, sigma=lo_sigma))
+        lo_prob_pct  = round((si.norm.cdf(_lo_d2_be) if is_call else si.norm.cdf(-_lo_d2_be)) * 100, 1)
+    else:
+        lo_delta, lo_gamma, lo_vega, lo_theta, lo_prob_pct = 0.0, 0.0, 0.0, 0.0, 0.0
+
+    # ── Banner IV Contesto ──
+    _lo_ivr = iv_rank
+    if _lo_ivr < 30:
+        _lo_iv_cls  = "verde"
+        _lo_iv_dot  = "verde"
+        _lo_iv_msg  = f"IV Rank {fmt(_lo_ivr,0)}/100 &mdash; Condizioni favorevoli per acquisto (opzioni economiche)"
+    elif _lo_ivr <= 50:
+        _lo_iv_cls  = "giallo"
+        _lo_iv_dot  = "giallo"
+        _lo_iv_msg  = f"IV Rank {fmt(_lo_ivr,0)}/100 &mdash; Condizioni neutre"
+    else:
+        _lo_iv_cls  = "rosso"
+        _lo_iv_dot  = "rosso"
+        _lo_iv_msg  = f"IV Rank {fmt(_lo_ivr,0)}/100 &mdash; IV elevata: stai pagando un premio alto, valuta se il setup &egrave; solido"
+    st.markdown(f"""
+<div class="signal-banner {_lo_iv_cls}" style="margin-bottom:1rem">
+  <span class="signal-dot {_lo_iv_dot}"></span>
+  <span class="signal-label">CONTESTO IV</span>
+  <span class="signal-text" style="margin-left:0.75rem">{_lo_iv_msg}</span>
+</div>
+""", unsafe_allow_html=True)
+
     # ── KPI Cards (5 compatte, stesso stile PS/BPS) ──
     kpi_pnl_cls = "green" if lo_pnl_attuale >= 0 else "red"
     kpi_pnl_pre = "+" if lo_pnl_attuale >= 0 else ""
@@ -3706,6 +3760,55 @@ if STRATEGIA in ("long_call", "long_put"):
     <div class="kpi-eyebrow">&#9679; Max perdita</div>
     <div class="kpi-value red">-{fmt(lo_max_loss,0)}</div>
     <div class="kpi-sub">Premio totale pagato</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Greche Live + Prob. Profitto ──
+    _prob_cls  = "green" if lo_prob_pct >= 40 else "gold" if lo_prob_pct >= 25 else "red"
+    _delta_dir = "rialzista" if is_call else "ribassista"
+    _theta_eur = round(lo_theta * 100, 2)  # € persi al giorno per contratto (100 azioni)
+    st.markdown(f"""
+<div class="kpi-grid" style="margin-top:0.6rem">
+  <div class="kpi-card kpi-sm" style="animation-delay:0s">
+    <div class="kpi-eyebrow greek-tooltip">&#9679; Delta
+      <span class="tip-icon">?</span>
+      <div class="tip-box">Sensibilit&agrave; del premio al movimento del sottostante. Per Long {'Call' if is_call else 'Put'}: valore {'positivo (0→1)' if is_call else 'negativo (-1→0)'}. Significa che per ogni +1€ di spot il premio varia di {fmt(abs(lo_delta),4)}€.</div>
+    </div>
+    <div class="kpi-value {'cyan' if is_call else 'gold'}">{lo_delta:+.4f}</div>
+    <div class="kpi-sub">Esposizione {_delta_dir}</div>
+  </div>
+  <div class="kpi-card kpi-sm" style="animation-delay:0.06s">
+    <div class="kpi-eyebrow greek-tooltip">&#9679; Gamma
+      <span class="tip-icon">?</span>
+      <div class="tip-box">Velocit&agrave; di variazione del Delta. Gamma alto = il Delta accelera con il movimento del sottostante — favorevole per il compratore in caso di forte direzionalit&agrave;.</div>
+    </div>
+    <div class="kpi-value cyan">{lo_gamma:.6f}</div>
+    <div class="kpi-sub">Accelerazione Delta</div>
+  </div>
+  <div class="kpi-card kpi-sm" style="animation-delay:0.12s">
+    <div class="kpi-eyebrow greek-tooltip">&#9679; Theta / giorno
+      <span class="tip-icon">?</span>
+      <div class="tip-box">Costo del tempo: ogni giorno che passa l'opzione perde questo valore anche a parit&agrave; di prezzo. Per il compratore il Theta &egrave; il nemico &mdash; pi&ugrave; &egrave; basso (negativo), pi&ugrave; &egrave; costoso tenere la posizione.</div>
+    </div>
+    <div class="kpi-value red">{lo_theta:+.4f}</div>
+    <div class="kpi-sub">{fmt(_theta_eur,2)} € / contratto / gg</div>
+  </div>
+  <div class="kpi-card kpi-sm" style="animation-delay:0.18s">
+    <div class="kpi-eyebrow greek-tooltip">&#9679; Vega
+      <span class="tip-icon">?</span>
+      <div class="tip-box">Sensibilit&agrave; al cambiamento dell'IV. Per il compratore il Vega &egrave; positivo: se la volatilit&agrave; sale il premio aumenta anche a parit&agrave; di spot. Vega di {fmt(lo_vega,4)} = +1% IV genera +{fmt(lo_vega,4)}€ di valore per azione.</div>
+    </div>
+    <div class="kpi-value green">{lo_vega:+.4f}</div>
+    <div class="kpi-sub">Esposizione alla IV</div>
+  </div>
+  <div class="kpi-card kpi-sm" style="animation-delay:0.24s">
+    <div class="kpi-eyebrow greek-tooltip">&#9679; Prob. Profitto
+      <span class="tip-icon">?</span>
+      <div class="tip-box">Probabilit&agrave; che il sottostante superi il break-even ({fmt(lo_be,2)}) alla scadenza, calcolata con la distribuzione log-normale di Black-Scholes. Non include i costi di transazione.</div>
+    </div>
+    <div class="kpi-value {_prob_cls}">{fmt(lo_prob_pct,1)}%</div>
+    <div class="kpi-sub">Break-even: {fmt(lo_be,2)}</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -4022,9 +4125,13 @@ if STRATEGIA == "strategy_advisor":
         adv_spot   = adv_dati["prezzo_spot"]
         adv_vix    = adv_dati["vix"] or 0
         adv_ivr    = adv_dati["iv_rank"]
+        adv_ivp    = adv_dati.get("iv_percentile", 50.0)
         adv_vol    = adv_dati["vol_storica"]
         adv_var    = adv_dati["variazione_gg"]
         adv_nome   = adv_dati["nome"]
+        adv_trend  = adv_dati.get("trend", "LATERALE")
+        adv_ma20   = adv_dati.get("ma_20", adv_spot)
+        adv_ma50   = adv_dati.get("ma_50", adv_spot)
         adv_vix_sym= adv_dati.get("vix_symbol", "^VIX")
         adv_vix_lbl= "VXN" if adv_vix_sym == "^VXN" else "VIX"
 
@@ -4088,12 +4195,24 @@ if STRATEGIA == "strategy_advisor":
             rb_reason = "IV sufficiente per vendita premium con rischio definito"
             rb_conf = "MEDIA"
             rb_cls = "gold"
-        elif adv_vix < 18 and adv_ivr < 30:
-            rb_vol = "BASSA — premi insufficienti per vendita"
-            rb_strat = "Long Call / Bull Call Spread"
-            rb_reason = "IV bassa = opzioni economiche, favorevole per acquisto direzionale"
-            rb_conf = "MEDIA"
+        elif adv_vix < 18 and adv_ivr < 30 and adv_trend == "RIALZISTA":
+            rb_vol = "BASSA — premi economici, trend confermato al rialzo"
+            rb_strat = "Long Call"
+            rb_reason = f"IV bassa = opzioni economiche + trend rialzista (Spot {fmt(adv_spot,2)} > MA20 {fmt(adv_ma20,2)} > MA50 {fmt(adv_ma50,2)})"
+            rb_conf = "ALTA"
             rb_cls = "cyan"
+        elif adv_vix < 18 and adv_ivr < 30 and adv_trend == "RIBASSISTA":
+            rb_vol = "BASSA — premi economici, trend confermato al ribasso"
+            rb_strat = "Long Put"
+            rb_reason = f"IV bassa = opzioni economiche + trend ribassista (Spot {fmt(adv_spot,2)} < MA20 {fmt(adv_ma20,2)} < MA50 {fmt(adv_ma50,2)})"
+            rb_conf = "ALTA"
+            rb_cls = "red"
+        elif adv_vix < 18 and adv_ivr < 30:
+            rb_vol = "BASSA — premi economici, mercato laterale"
+            rb_strat = "Attendere segnale direzionale"
+            rb_reason = "Mercato laterale: IV bassa favorisce l'acquisto, ma manca la direzionalità. Attendi che il trend si formi."
+            rb_conf = "BASSA"
+            rb_cls = "gold"
         else:
             rb_vol = "NEUTRO — contesto misto"
             rb_strat = "Attendere condizioni migliori"
@@ -4118,6 +4237,63 @@ if STRATEGIA == "strategy_advisor":
     </div>
   </div>
   <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary);font-style:italic">{rb_reason}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        # ── Card "Perché questa strategia" ──
+        _vix_ok   = adv_vix >= 25 or adv_vix >= 35
+        _vix_pos  = adv_vix >= 20
+        _ivr_ok   = adv_ivr >= 50
+        _ivr_pos  = adv_ivr >= 30
+        _ivp_ok   = adv_ivp >= 50
+        _ivp_pos  = adv_ivp >= 30
+        _trend_ok = adv_trend in ("RIALZISTA", "RIBASSISTA")
+
+        def _ind_badge(ok, pos):
+            if ok:   return "✓", "accent-green",  "green"
+            if pos:  return "~", "accent-gold",    "gold"
+            return           "✗", "accent-red",    "red"
+
+        _vix_ic,  _vix_cc,  _vix_bc  = _ind_badge(_vix_ok,  _vix_pos)
+        _ivr_ic,  _ivr_cc,  _ivr_bc  = _ind_badge(_ivr_ok,  _ivr_pos)
+        _ivp_ic,  _ivp_cc,  _ivp_bc  = _ind_badge(_ivp_ok,  _ivp_pos)
+        _trd_ic,  _trd_cc,  _trd_bc  = _ind_badge(_trend_ok, _trend_ok)
+
+        _vix_desc = ("Paura elevata → premi gonfiati, ottimo per vendere" if _vix_ok
+                     else "Volatilità nella norma → premi accettabili" if _vix_pos
+                     else "Volatilità bassa → premi ridotti, favorisce acquisto")
+        _ivr_desc = ("IV Rank alto → opzioni costose rispetto al passato" if _ivr_ok
+                     else "IV Rank medio → valutare il contesto" if _ivr_pos
+                     else "IV Rank basso → opzioni economiche, favorisce acquisto")
+        _ivp_desc = ("IV Percentile alto → IV superiore al " + fmt(adv_ivp, 0) + "% dei giorni dell'anno" if _ivp_ok
+                     else "IV Percentile medio → in linea con la media storica" if _ivp_pos
+                     else "IV Percentile basso → IV nel " + fmt(adv_ivp, 0) + "° percentile, opzioni a sconto")
+        _trd_desc = (f"Trend {adv_trend} — MA20 {fmt(adv_ma20,2)}, MA50 {fmt(adv_ma50,2)}" if _trend_ok
+                     else f"Mercato laterale — nessuna direzionalità confermata (MA20 {fmt(adv_ma20,2)}, MA50 {fmt(adv_ma50,2)})")
+
+        st.markdown(f"""
+<div class="section-title" style="margin-top:1.2rem">Perch&eacute; questa strategia</div>
+<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1rem">
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; {adv_vix_lbl}</div>
+    <div class="kpi-value {_vix_bc}" style="font-size:1.5rem">{fmt(adv_vix,1)} <span style="font-size:0.9rem;color:var(--{_vix_cc})">{_vix_ic}</span></div>
+    <div class="kpi-sub" style="font-size:0.62rem">{_vix_desc}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; IV Rank</div>
+    <div class="kpi-value {_ivr_bc}" style="font-size:1.5rem">{fmt(adv_ivr,0)}/100 <span style="font-size:0.9rem;color:var(--{_ivr_cc})">{_ivr_ic}</span></div>
+    <div class="kpi-sub" style="font-size:0.62rem">{_ivr_desc}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; IV Percentile</div>
+    <div class="kpi-value {_ivp_bc}" style="font-size:1.5rem">{fmt(adv_ivp,0)}° <span style="font-size:0.9rem;color:var(--{_ivp_cc})">{_ivp_ic}</span></div>
+    <div class="kpi-sub" style="font-size:0.62rem">{_ivp_desc}</div>
+  </div>
+  <div class="kpi-card kpi-sm">
+    <div class="kpi-eyebrow">&#9679; Trend</div>
+    <div class="kpi-value {_trd_bc}" style="font-size:1.3rem">{adv_trend} <span style="font-size:0.9rem;color:var(--{_trd_cc})">{_trd_ic}</span></div>
+    <div class="kpi-sub" style="font-size:0.62rem">{_trd_desc}</div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
