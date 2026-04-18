@@ -664,6 +664,26 @@ hr { border-color: var(--border-subtle) !important; }
 .signal-banner.rosso  .signal-label { color: var(--accent-red); }
 .signal-text { font-family: var(--font-body); font-size: 0.88rem; color: var(--text-secondary); line-height: 1.4; }
 
+/* ── ACTION BANNER (Segnale Operativo) ── */
+.action-banner {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.85rem 1.2rem; border-radius: var(--radius-xl); border: 1px solid;
+    margin-bottom: 1.4rem; font-family: var(--font-mono);
+}
+.action-banner.green { background: rgba(0,229,160,0.07); border-color: rgba(0,229,160,0.35); }
+.action-banner.gold  { background: rgba(255,181,71,0.07); border-color: rgba(255,181,71,0.35); }
+.action-banner.red   { background: rgba(255,90,90,0.07);  border-color: rgba(255,90,90,0.35); }
+.action-banner .ab-label {
+    font-size: 0.52rem; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
+}
+.action-banner .ab-text { font-size: 0.82rem; color: var(--text-primary); line-height: 1.4; }
+.action-banner .ab-prob { font-weight: 700; }
+.action-banner.green .ab-prob { color: var(--accent-green); }
+.action-banner.gold  .ab-prob { color: var(--accent-gold); }
+.action-banner.red   .ab-prob { color: var(--accent-red); }
+.action-banner .ab-strike { font-weight: 700; color: var(--accent-cyan); }
+
 /* ── KPI CARDS ── */
 .kpi-card {
     background: var(--bg-card);
@@ -2938,6 +2958,19 @@ if STRATEGIA not in ("long_call", "long_put"):
 # ══════════════════════════════════════════════════════════
 if STRATEGIA == "put_scoperta":
 
+    # ── SEGNALE OPERATIVO ──
+    _ab_cls = "green" if prob >= 0.90 else "gold" if prob >= 0.80 else "red"
+    st.markdown(f"""
+    <div class="action-banner {_ab_cls}">
+      <span class="ab-label">&#9654; Segnale Operativo</span>
+      <span class="ab-text">
+        Con il <span class="ab-prob">{fmt(prob*100,1)}%</span> di probabilit&agrave; di successo
+        &rarr; Vendi Put Scoperta a Strike <span class="ab-strike">{fmt(K,2)}</span>
+        &middot; Spot: {fmt(spot,2)} &middot; {fmt(dist,2)}% sotto lo spot
+      </span>
+    </div>
+    """, unsafe_allow_html=True)
+
     # ── KPI CARDS &mdash; 4 colonne ──
     c1, c2, c3, c4 = st.columns(4, gap="medium")
 
@@ -3266,6 +3299,19 @@ updateChart(TOTAL_DTE);
 # DASHBOARD — BULL PUT SPREAD
 # ══════════════════════════════════════════════════════════
 elif STRATEGIA == "bull_put_spread" and bps_credito_tot is not None:
+
+    # ── SEGNALE OPERATIVO ──
+    _ab_cls_bps = "green" if prob >= 0.90 else "gold" if prob >= 0.80 else "red"
+    st.markdown(f"""
+    <div class="action-banner {_ab_cls_bps}">
+      <span class="ab-label">&#9654; Segnale Operativo</span>
+      <span class="ab-text">
+        Con il <span class="ab-prob">{fmt(prob*100,1)}%</span> di probabilit&agrave; di successo
+        &rarr; Vendi Bull Put Spread <span class="ab-strike">{fmt(bps_K_venduta,2)} / {fmt(bps_K_comprata,2)}</span>
+        &middot; Spot: {fmt(spot,2)} &middot; {fmt(bps_dist_venduta,2)}% sotto lo spot
+      </span>
+    </div>
+    """, unsafe_allow_html=True)
 
     # ── KPI CARDS BPS ──
     c1, c2, c3, c4 = st.columns(4, gap="medium")
@@ -3724,6 +3770,20 @@ if STRATEGIA in ("long_call", "long_put"):
   <span class="signal-dot {_lo_iv_dot}"></span>
   <span class="signal-label">CONTESTO IV</span>
   <span class="signal-text" style="margin-left:0.75rem">{_lo_iv_msg}</span>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── SEGNALE OPERATIVO ──
+    _ab_cls_lo = "green" if lo_prob_pct >= 40 else "gold" if lo_prob_pct >= 25 else "red"
+    _az_lo = "Acquista Call" if is_call else "Acquista Put"
+    st.markdown(f"""
+<div class="action-banner {_ab_cls_lo}">
+  <span class="ab-label">&#9654; Segnale Operativo</span>
+  <span class="ab-text">
+    Con il <span class="ab-prob">{fmt(lo_prob_pct,1)}%</span> di probabilit&agrave; di profitto
+    &rarr; {_az_lo} a Strike <span class="ab-strike">{fmt(lo_strike,2)}</span>
+    &middot; Spot: {fmt(spot,2)} &middot; Break-even: {fmt(lo_be,2)}
+  </span>
 </div>
 """, unsafe_allow_html=True)
 
